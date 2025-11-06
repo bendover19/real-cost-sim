@@ -187,7 +187,6 @@ useEffect(() => {
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string|null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
 
   // Post guard
   const [postedOnce, setPostedOnce] = useState<boolean>(false);
