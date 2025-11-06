@@ -148,6 +148,22 @@ function BarChart({ currency, net, housing, commute, maintenance, dependents, he
 export default function Page() {
   const [step, setStep] = useState<number>(0);
 
+  const [sessionId, setSessionId] = useState<string>('');
+useEffect(() => {
+  try {
+    let id = localStorage.getItem('rcs_session_id');
+    if (!id) {
+      id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+      localStorage.setItem('rcs_session_id', id);
+    }
+    setSessionId(id);
+  } catch {
+    setSessionId(Math.random().toString(36).slice(2));
+  }
+}, []);
+
   // Core inputs
   const [region, setRegion] = useState<RegionId>('UK');
   const [takeHome, setTakeHome] = useState<number>(2200);
@@ -172,21 +188,6 @@ export default function Page() {
   const shareRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string|null>(null);
   const [sessionId, setSessionId] = useState<string>('');
-useEffect(() => {
-  try {
-    let id = localStorage.getItem('rcs_session_id');
-    if (!id) {
-      id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2);
-      localStorage.setItem('rcs_session_id', id);
-    }
-    setSessionId(id);
-  } catch {
-    // fallback if localStorage blocked
-    setSessionId(Math.random().toString(36).slice(2));
-  }
-}, []);
 
   // Post guard
   const [postedOnce, setPostedOnce] = useState<boolean>(false);
@@ -270,7 +271,12 @@ function saveEmail() {
   // Force a second POST that includes the email
   saveResult({ force: true });
 }
-  useEffect(() => { if (step >= 3) saveResult(); /* post once on reveal */ /* eslint-disable-next-line */ }, [step]);
+  useEffect(() => {
+  // Post once on reveal, but ONLY when we have a sessionId and we haven't posted yet
+  if (step >= 3 && sessionId && !postedOnce) {
+    saveResult({ force: true });
+  }
+}, [step, sessionId, postedOnce]);
 
   // Screens
   const Start = (
