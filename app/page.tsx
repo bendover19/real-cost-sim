@@ -171,6 +171,10 @@ export default function Page() {
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string|null>(null);
+  const [sessionId] = useState<string>(() => {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+    return Math.random().toString(36).slice(2); // fallback
+  });
 
   // Post guard
   const [postedOnce, setPostedOnce] = useState<boolean>(false);
@@ -226,6 +230,7 @@ export default function Page() {
   try {
     if (postedOnce && !force) return;
     const payload = {
+      session_id: sessionId,
       region, household, take_home: netMonthly, housing,
       commute_mode: transportMode, commute_monthly: commuteMonthly,
       hours_week: hoursWeek, drivers, toggles,
