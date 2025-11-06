@@ -290,7 +290,7 @@ function saveEmail() {
         </div>
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
         <div className="space-y-6 mt-6">
-          <p className="text-zinc-700 dark:text-zinc-300">You work hard, try to stay afloat, and tell yourself it’ll all make sense soon.</p>
+          <p className="text-zinc-700 dark:text-zinc-300">You work hard, try to stay afloat, and tell yourself it’ll all make sense soon...</p>
           <p className="text-zinc-700 dark:text-zinc-300">Between rent, travel, and the quiet cost of keeping yourself presentable and sane, the numbers rarely add up.</p>
           <p className="text-zinc-700 dark:text-zinc-300">This isn’t about budgeting — it’s about reality.</p>
 <p className="text-zinc-700 dark:text-zinc-300 font-medium">
