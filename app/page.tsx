@@ -171,10 +171,22 @@ export default function Page() {
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string|null>(null);
-  const [sessionId] = useState<string>(() => {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-    return Math.random().toString(36).slice(2); // fallback
-  });
+  const [sessionId, setSessionId] = useState<string>('');
+useEffect(() => {
+  try {
+    let id = localStorage.getItem('rcs_session_id');
+    if (!id) {
+      id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+      localStorage.setItem('rcs_session_id', id);
+    }
+    setSessionId(id);
+  } catch {
+    // fallback if localStorage blocked
+    setSessionId(Math.random().toString(36).slice(2));
+  }
+}, []);
 
   // Post guard
   const [postedOnce, setPostedOnce] = useState<boolean>(false);
@@ -227,10 +239,11 @@ export default function Page() {
 
   async function saveResult(opts: { force?: boolean } = {}) {
   const { force = false } = opts;
+  if (!sessionId) return;                 // ← do not send until we have an id
   try {
     if (postedOnce && !force) return;
     const payload = {
-      session_id: sessionId,
+      session_id: sessionId,              // stays in the payload
       region, household, take_home: netMonthly, housing,
       commute_mode: transportMode, commute_monthly: commuteMonthly,
       hours_week: hoursWeek, drivers, toggles,
@@ -239,17 +252,16 @@ export default function Page() {
       leftover, effective_per_hour: effectivePerHour, maintenance_pct: maintenancePct,
       email: email || null,
     };
-    if (DATA_MODE === 'api') {
-      const resp = await fetch(INGEST_PATH, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (resp.ok) setPostedOnce(true);
-    }
-  } catch {
-    // noop
-  }
+    // TEMP: verify in console that session_id is present
+    console.log('posting payload', payload);
+
+    const resp = await fetch(INGEST_PATH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) setPostedOnce(true);
+  } catch {/* noop */}
 }
 
 function saveEmail() {
