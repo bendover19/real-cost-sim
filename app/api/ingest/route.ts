@@ -1,32 +1,40 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+export const runtime = 'nodejs';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+type Payload = Record<string, any>;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as Payload;
 
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!url || !key) {
+      return new Response(JSON.stringify({ error: 'Missing Supabase env vars' }), { status: 500 });
+    }
     if (!body?.session_id) {
-      return NextResponse.json({ error: 'Missing session_id' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Missing session_id' }), { status: 400 });
     }
 
-    // upsert on session_id so multiple posts (email later) overwrite one row
-    const { data, error } = await supabase
-      .from('responses')
-      .upsert([body], { onConflict: 'session_id', ignoreDuplicates: false })
-      .select('id, session_id')
-      .single();
+    // Upsert on session_id so second POST overwrites first
+    const resp = await fetch(`${url}/rest/v1/responses?on_conflict=session_id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify([body]),
+    });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!resp.ok) {
+      const text = await resp.text();
+      return new Response(JSON.stringify({ error: 'DB upsert failed', detail: text }), { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, id: data?.id, session_id: data?.session_id });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Bad request', detail: String(e) }), { status: 400 });
   }
 }
