@@ -186,10 +186,16 @@ export default function Page(){
   const [abVariant, setAbVariant] = useState<'A'|'B'>('A');
   useEffect(()=>{ 
     try{
-      let id=localStorage.getItem('rcs_session_id');
-      if(!id){ id=(crypto as any)?.randomUUID? (crypto as any).randomUUID(): Math.random().toString(36).slice(2); localStorage.setItem('rcs_session_id', id);} 
-      setSessionId(id as string);
-    }catch{ setSessionId(Math.random().toString(36).slice(2)); }
+      try{
+      const existing = localStorage.getItem('rcs_session_id');
+      const newId = existing ?? (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
+      if(!existing){
+        localStorage.setItem('rcs_session_id', newId);
+      }
+      setSessionId(newId);
+    }catch{
+      setSessionId(Math.random().toString(36).slice(2));
+    }
     try{
       const url=new URL(window.location.href);
       const utm=url.searchParams.get('utm_source')||url.searchParams.get('ref'); if(utm) setLandSource(utm);
