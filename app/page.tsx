@@ -185,11 +185,22 @@ export default function Page(){
   const [landSource, setLandSource] = useState<string>('unknown');
   const [abVariant, setAbVariant] = useState<'A'|'B'>('A');
   useEffect(()=>{ 
-    try{
-      let id=localStorage.getItem('rcs_session_id');
-      if(!id){ id=(crypto as any)?.randomUUID? (crypto as any).randomUUID(): Math.random().toString(36).slice(2); localStorage.setItem('rcs_session_id', id);} 
-      setSessionId(id as string);
-    }catch{ setSessionId(Math.random().toString(36).slice(2)); }
+  try {
+    let sid: string = localStorage.getItem('rcs_session_id') ?? '';
+    if (!sid) {
+      const hasUUID =
+        typeof crypto !== 'undefined' &&
+        typeof (crypto as any).randomUUID === 'function';
+      sid = hasUUID
+        ? (crypto as any).randomUUID()
+        : Math.random().toString(36).slice(2);
+      localStorage.setItem('rcs_session_id', sid); // sid is guaranteed string here
+    }
+    setSessionId(sid); // sid: string
+  } catch {
+    // Fallback if localStorage/crypto is unavailable
+    setSessionId(Math.random().toString(36).slice(2));
+  }
     try{
       const url=new URL(window.location.href);
       const utm=url.searchParams.get('utm_source')||url.searchParams.get('ref'); if(utm) setLandSource(utm);
