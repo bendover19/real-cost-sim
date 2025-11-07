@@ -352,7 +352,7 @@ export default function Page(){
   useEffect(() => {
     async function loadPct(){
       try{
-        const resp = await fetch('/api/percentiles', { method:'POST', headers:{'Content-Type':'application/json'},
+        const resp = await fetch('/api/percentiles', { method:'GET', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ region, value: Math.max(0, effectivePerHour) })
         });
         if(resp.ok){ const j = await resp.json(); if(j && typeof j.p50 !== 'undefined') setPctData(j); }
