@@ -186,16 +186,11 @@ export default function Page(){
   const [abVariant, setAbVariant] = useState<'A'|'B'>('A');
   useEffect(()=>{ 
     try{
-      try{
       const existing = localStorage.getItem('rcs_session_id');
       const newId = existing ?? (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
-      if(!existing){
-        localStorage.setItem('rcs_session_id', newId);
-      }
+      if (!existing) { localStorage.setItem('rcs_session_id', newId); }
       setSessionId(newId);
-    }catch{
-      setSessionId(Math.random().toString(36).slice(2));
-    }
+    }catch(_err){ setSessionId(Math.random().toString(36).slice(2)); }
     try{
       const url=new URL(window.location.href);
       const utm=url.searchParams.get('utm_source')||url.searchParams.get('ref'); if(utm) setLandSource(utm);
@@ -204,12 +199,12 @@ export default function Page(){
       const qRegion=params.get('region') as RegionId|null; if(qRegion && regions.find(r=>r.id===qRegion)) setRegion(qRegion);
       const qUrban=params.get('urban') as Urbanicity|null; if(qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
       const qCtx=params.get('ctx') as CommuteContext|null; if(qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
-    }catch{}
+    }catch(_err){}
     try{
       const existing=document.cookie.match(/rcs_ab=([AB])/);
       if(existing){ setAbVariant((existing[1] as 'A'|'B')); }
       else { const v=Math.random()<0.5?'A':'B'; document.cookie=`rcs_ab=${v}; path=/; max-age=${60*60*24*365}`; setAbVariant(v); }
-    }catch{}
+    }catch(_err){}
   },[]);
 
   // Geo
@@ -348,7 +343,7 @@ export default function Page(){
         const resp = await fetch(INGEST_PATH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(resp.ok) setPostedOnce(true);
       }
-    }catch{}
+    }catch(_err){}
   }
   function saveEmail(){ if(!email) return; setEmailSaved(true); saveResult({force:true}); }
   useEffect(()=>{ if(step>=3 && sessionId && !postedOnce) saveResult({force:true}); },[step,sessionId,postedOnce]); // eslint-disable-line
@@ -361,13 +356,13 @@ export default function Page(){
           body: JSON.stringify({ region, value: Math.max(0, effectivePerHour) })
         });
         if(resp.ok){ const j = await resp.json(); if(j && typeof j.p50 !== 'undefined') setPctData(j); }
-      }catch{}
+      }catch(_err){}
     }
     async function loadBench(){
       try{
         const resp = await fetch('/api/benchmarks');
         if(resp.ok){ const j = await resp.json(); if(Array.isArray(j)) setBenchmarks(j); }
-      }catch{}
+      }catch(_err){}
     }
     if(step >= 3){ loadPct(); loadBench(); }
   }, [step, region, effectivePerHour]);
