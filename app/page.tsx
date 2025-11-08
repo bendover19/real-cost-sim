@@ -3,39 +3,22 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
-// TS-safe handle to webcrypto (browser or Node), without DOM types
-const gcrypto: any =
-  (typeof globalThis !== "undefined" && (globalThis as any).crypto) || undefined;
-
 
 /**
  * Real Cost Simulator — page.tsx (stable session + single-submit)
- * - Percentiles/benchmarks removed (no Supabase calls from client)
- * - Robust session_id via cookie + localStorage (never empty)
- * - NO auto-post on reveal (prevents duplicate rows)
- * - Post happens only on button click (baseline or email unlock)
- * - Mutex prevents overlapping posts in dev/StrictMode
+ * - No WebCrypto/DOM types (TS-safe)
+ * - Session id stored in cookie + localStorage
+ * - No auto-posts; only manual submit (baseline + optional email)
+ * - Mutex prevents overlapping posts (helps with StrictMode)
+ * - No percentiles/benchmarks; no Supabase imports
  */
 
 const INGEST_PATH = "/api/ingest";
 
 // ---------- Types ----------
 type RegionId = "UK" | "EU" | "US" | "OTHER";
-type Household =
-  | "solo"
-  | "partner"
-  | "partnerKids"
-  | "singleParent"
-  | "share"
-  | "family";
-type DriverKey =
-  | "belonging"
-  | "identity"
-  | "timeTrade"
-  | "comfort"
-  | "connection"
-  | "treats"
-  | "moneyPressure";
+type Household = "solo" | "partner" | "partnerKids" | "singleParent" | "share" | "family";
+type DriverKey = "belonging" | "identity" | "timeTrade" | "comfort" | "connection" | "treats" | "moneyPressure";
 type SpendKey = "pet" | "therapy" | "supportOthers" | "health";
 type Urbanicity = "inner" | "city" | "suburban" | "rural";
 type CommuteContext = "transitEfficient" | "mixed" | "carDependent";
@@ -58,10 +41,7 @@ const regions: Region[] = [
   { id: "OTHER", label: "Other / OECD", currency: "$", commutePT: 100, commuteDrive: 180 },
 ];
 
-const URBANICITY: Record<
-  Urbanicity,
-  { label: string; rentMul: number; commuteMul: number }
-> = {
+const URBANICITY: Record<Urbanicity, { label: string; rentMul: number; commuteMul: number }> = {
   inner: { label: "Inner-city core", rentMul: 1.5, commuteMul: 1.1 },
   city: { label: "City / metro", rentMul: 1.2, commuteMul: 1.0 },
   suburban: { label: "Suburban", rentMul: 1.0, commuteMul: 1.1 },
@@ -86,10 +66,7 @@ const DRIVER_TYPICAL: Record<DriverKey, number> = {
 };
 
 // UI meta for drivers
-const DRIVER_META: Record<
-  DriverKey,
-  { emoji: string; title: string; sub: string; color: string }
-> = {
+const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string; color: string }> = {
   belonging: { emoji: "🫶", title: "Belonging", sub: "Not being the ghost at work or with friends", color: "rose" },
   identity: { emoji: "👔", title: "Identity", sub: "Looking like you belong where you work", color: "violet" },
   timeTrade: { emoji: "⏱️", title: "Time trade", sub: "When tired, you buy time (delivery, taxis)", color: "amber" },
@@ -111,10 +88,7 @@ const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number 
 };
 
 // Slider limits for variable spends (high-variance)
-const SPEND_LIMITS: Record<
-  SpendKey,
-  { label: string; min: number; max: number; step: number }
-> = {
+const SPEND_LIMITS: Record<SpendKey, { label: string; min: number; max: number; step: number }> = {
   pet: { label: "🐾 Pet costs (food, insurance, sitter/boarding, horse, etc.)", min: 0, max: 2000, step: 10 },
   therapy: { label: "🧠 Therapy / coaching / counselling", min: 0, max: 2000, step: 10 },
   supportOthers: { label: "🤝 Support others (family remit, gifts, obligations)", min: 0, max: 3000, step: 10 },
@@ -161,26 +135,18 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
   return Math.round((netMonthly * Math.max(0, Math.min(20, ratePct))) / 100);
 }
 
-// ---------- Session helpers (cookie + localStorage) ----------
-function uuidv4() {
-  if (gcrypto?.randomUUID) return gcrypto.randomUUID();
-
-  const buf = new Uint8Array(16);
-  if (gcrypto?.getRandomValues) {
-    gcrypto.getRandomValues(buf);
-  } else {
-    // fallback if no webcrypto
-    for (let i = 0; i < 16; i++) buf[i] = Math.floor(Math.random() * 256);
-  }
-
-  // RFC4122 v4 bits
-  buf[6] = (buf[6] & 0x0f) | 0x40;
-  buf[8] = (buf[8] & 0x3f) | 0x80;
-
-  const hex = Array.from(buf, b => b.toString(16).padStart(2, "0"));
-  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+// ---------- Session helpers (no WebCrypto) ----------
+let __sidCounter = 0;
+function simpleId() {
+  return (
+    "sid_" +
+    Date.now().toString(36) +
+    "_" +
+    Math.random().toString(36).slice(2) +
+    "_" +
+    (__sidCounter++).toString(36)
+  );
 }
-
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
   const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -203,14 +169,14 @@ function getOrCreateSessionId(): string {
         window.localStorage.setItem("rcs_session_id", existing);
       return existing;
     }
-    const id = uuidv4();
+    const id = simpleId();
     setCookie("rcs_sid", id);
     if (typeof window !== "undefined")
       window.localStorage.setItem("rcs_session_id", id);
     return id;
   } catch {
-    // absolute last resort
-    const id = existing ?? (gcrypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
+    // last resort
+    const id = "sid_" + Math.random().toString(36).slice(2);
     setCookie("rcs_sid", id);
     try {
       if (typeof window !== "undefined")
@@ -508,15 +474,13 @@ export default function Page() {
   }
 
   function saveBaseline() {
-    // Post only once; later email submit will update same row (server must upsert)
     if (!hasBaselinePosted) postOnce();
   }
 
   function saveEmail() {
     if (!email) return;
     setEmailSaved(true);
-    // Always post; server should upsert on session_id so this updates same row
-    postOnce();
+    postOnce(); // server upserts by session_id, so this updates same row
   }
 
   // --- Validation helpers ---
@@ -923,7 +887,7 @@ export default function Page() {
   );
 }
 
-// ---------- Self-tests ----------
+// ---------- Self-tests (optional) ----------
 (function runSelfTests() {
   console.assert(currencySymbol("UK") === "£", "UK currency £");
   console.assert(currencySymbol("US") === "$", "US currency $");
