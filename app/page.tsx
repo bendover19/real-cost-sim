@@ -3,6 +3,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
+// TS-safe handle to webcrypto (browser or Node), without DOM types
+const gcrypto: any =
+  (typeof globalThis !== "undefined" && (globalThis as any).crypto) || undefined;
+
 
 /**
  * Real Cost Simulator — page.tsx (stable session + single-submit)
@@ -159,30 +163,22 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
 
 // ---------- Session helpers (cookie + localStorage) ----------
 function uuidv4() {
-  // use the global crypto in a TS-safe way (both browser + node webcrypto)
-  const gcrypto = (globalThis as any)?.crypto as
-    | { randomUUID?: () => string; getRandomValues?: (a: Uint8Array) => Uint8Array }
-    | undefined;
-
   if (gcrypto?.randomUUID) return gcrypto.randomUUID();
 
   const buf = new Uint8Array(16);
-
   if (gcrypto?.getRandomValues) {
     gcrypto.getRandomValues(buf);
   } else {
-    // fallback: Math.random
+    // fallback if no webcrypto
     for (let i = 0; i < 16; i++) buf[i] = Math.floor(Math.random() * 256);
   }
 
-  // per RFC4122 v4
+  // RFC4122 v4 bits
   buf[6] = (buf[6] & 0x0f) | 0x40;
   buf[8] = (buf[8] & 0x3f) | 0x80;
 
   const hex = Array.from(buf, b => b.toString(16).padStart(2, "0"));
-  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex
-    .slice(8, 10)
-    .join("")}-${hex.slice(10, 16).join("")}`;
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
 }
 
 function getCookie(name: string) {
@@ -214,7 +210,7 @@ function getOrCreateSessionId(): string {
     return id;
   } catch {
     // absolute last resort
-    const id = Math.random().toString(36).slice(2);
+    const id = existing ?? (gcrypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
     setCookie("rcs_sid", id);
     try {
       if (typeof window !== "undefined")
