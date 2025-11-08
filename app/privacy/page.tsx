@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       <h2>4. Data we collect</h2>
       <p>We may collect limited analytics to understand usage. We do not sell personal data.</p>
       <h2>5. Contact</h2>
-      <p>Contact us at <strong>support@yoursite.com</strong>.</p>
+      <p>Contact us at <strong>jack@energy-outcomes.com</strong>.</p>
     </div>
   );
 }
