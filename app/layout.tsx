@@ -1,7 +1,6 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
-import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Real Cost Simulator",
@@ -12,21 +11,41 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* Cookie Consent CSS */}
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css"
-        />
-
-        {/* Google AdSense (server-rendered so it's visible in View Source) */}
+        {/* Google AdSense */}
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
           crossOrigin="anonymous"
         ></script>
+
+        {/* Google Funding Choices CMP (Consent Mode v2) */}
+        <script
+          async
+          src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"
+        ></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function signalGooglefcPresent() {
+                  if (!window.frames['googlefcPresent']) {
+                    if (document.body) {
+                      const iframe = document.createElement('iframe');
+                      iframe.style.cssText = 'display:none';
+                      iframe.name = 'googlefcPresent';
+                      document.body.appendChild(iframe);
+                    } else {
+                      setTimeout(signalGooglefcPresent, 0);
+                    }
+                  }
+                }
+                signalGooglefcPresent();
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen flex flex-col">
-        {/* Page content */}
         <main className="flex-grow">{children}</main>
 
         {/* Footer */}
@@ -38,35 +57,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
           </p>
         </footer>
-
-        {/* Cookie Consent JS */}
-        <Script
-          src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"
-          strategy="afterInteractive"
-        />
-        <Script id="cookieconsent-init" strategy="afterInteractive">
-          {`
-            window.addEventListener('load', function () {
-              if (window.cookieconsent) {
-                window.cookieconsent.initialise({
-                  type: "opt-in",
-                  palette: { popup: { background: "#000" }, button: { background: "#f1d600" } },
-                  theme: "classic",
-                  content: {
-                    message: "We use cookies to analyze traffic and show ads.",
-                    dismiss: "Got it!",
-                    allow: "Allow cookies",
-                    deny: "Decline",
-                    link: "Learn more",
-                    href: "/privacy"
-                  },
-                  law: { regionalLaw: true },
-                  location: true
-                });
-              }
-            });
-          `}
-        </Script>
       </body>
     </html>
   );
