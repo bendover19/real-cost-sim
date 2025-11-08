@@ -6,11 +6,9 @@ import html2canvas from 'html2canvas';
 
 /**
  * Real Cost Simulator — Global, geo-aware (single-file page component)
- * Gamification build:
- * - Percentile rank vs region (progress bar marker + quartiles)
+ * Gamification build (simplified):
  * - Life Efficiency Score (0–100)
  * - Challenge Mode (remote days / rent delta / income delta)
- * - Community Benchmarks (medians by region via /api/benchmarks)
  * Core UX:
  * - Gross/Net toggle; City/Region; Area type; Commute context
  * - Walk/Bike; Remote + WFH utilities; Bills included
@@ -296,10 +294,6 @@ export default function Page(){
   const deltaDebt     = useMemo(()=> Math.round((debtMonthly+studentLoan)*0.15), [debtMonthly, studentLoan]);
   const deltaTotal    = useMemo(()=> Math.max(0, deltaRemote1d + deltaDebt), [deltaRemote1d, deltaDebt]);
 
-  // Percentiles & benchmarks
-  const [pctData, setPctData] = useState<{p25:number,p50:number,p75:number,pct:number,n:number} | null>(null);
-  const [benchmarks, setBenchmarks] = useState<Array<{region:string,p50:number,avg_leftover:number,n:number}>>([]);
-
   // Life Efficiency Score
   function norm(x:number, min:number, max:number){ if(!isFinite(x)) return 0; if(max===min) return 0; return Math.max(0, Math.min(1, (x - min)/(max - min))); }
   const efficiencyScore = useMemo(()=>{
@@ -347,25 +341,6 @@ export default function Page(){
   }
   function saveEmail(){ if(!email) return; setEmailSaved(true); saveResult({force:true}); }
   useEffect(()=>{ if(step>=3 && sessionId && !postedOnce) saveResult({force:true}); },[step,sessionId,postedOnce]); // eslint-disable-line
-
-  // Fetch percentile + benchmarks when we hit results
-  useEffect(() => {
-    async function loadPct(){
-      try{
-        const resp = await fetch('/api/percentiles', { method:'GET', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ region, value: Math.max(0, effectivePerHour) })
-        });
-        if(resp.ok){ const j = await resp.json(); if(j && typeof j.p50 !== 'undefined') setPctData(j); }
-      }catch(_err){}
-    }
-    async function loadBench(){
-      try{
-        const resp = await fetch('/api/benchmarks');
-        if(resp.ok){ const j = await resp.json(); if(Array.isArray(j)) setBenchmarks(j); }
-      }catch(_err){}
-    }
-    if(step >= 3){ loadPct(); loadBench(); }
-  }, [step, region, effectivePerHour]);
 
   // --- Validation helpers ---
   const takeHomeWeird = (!isGross && takeHome>20000) || (isGross && takeHome>30000);
@@ -617,32 +592,14 @@ export default function Page(){
                 className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? 'blur-sm select-none pointer-events-none' : ''}`}
               >
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
-                <div className="text-3xl font-bold mt-1">{currency}{Math.max(0,baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h</div>
+                <div className="text-lg mt-1"">{currency}{Math.max(0,baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h</div>
                 <div className="text-lg mt-1">That's {currency}{baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.</div>
                 <div className="text-[11px] text-zinc-500 mt-1 italic">*Calculated as net discretionary pay per actual hour of life traded.</div>
                 {netMonthly>0 && (
                   <div className="text-3xl font-bold mt-1">Out of every {currency}1 you earn, {currency}{(1 - Math.max(0,baselineLeftover)/netMonthly).toFixed(2)} goes to staying employable and functional.</div>
                 )}
 
-                {/* Percentile rank */}
-                {pctData && typeof pctData.pct === 'number' && (
-                  <div className="mt-3">
-                    <div className="text-sm text-zinc-400">
-                      You’re ahead of <span className="font-semibold text-white">{Math.round(pctData.pct*100)}%</span> of people in your region ({pctData.n?.toLocaleString?.() ?? '—'} samples).
-                    </div>
-                    <div className="mt-2 h-2 w-full rounded bg-zinc-800 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500" />
-                      <div className="absolute -top-[2px]" style={{ left: `${Math.round((pctData.pct||0)*100)}%` }}>
-                        <div className="w-[2px] h-4 bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-[11px] text-zinc-500 mt-1">
-                      <span>P25 {currency}{(pctData.p25 ?? 0).toFixed(2)}/hr</span>
-                      <span>Median {currency}{(pctData.p50 ?? 0).toFixed(2)}/hr</span>
-                      <span>P75 {currency}{(pctData.p75 ?? 0).toFixed(2)}/hr</span>
-                    </div>
-                  </div>
-                )}
+                {/* Percentile rank removed to avoid API/DB calls */}
 
                 <div className="mt-4">
                   <div className="text-xs text-zinc-400 mb-2">If you do nothing, here’s where it goes</div>
@@ -747,22 +704,7 @@ export default function Page(){
 
             {(savingsMonthly>0 || savingsRate>0) && (<Card><CardBody><div className="text-sm">Savings / pension</div><div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency}/> / month ({savingsRate}%)</div></CardBody></Card>)}
 
-            {/* Community Benchmarks */}
-            {benchmarks?.length>0 && (
-              <Card><CardBody>
-                <div className="text-sm font-medium">Community benchmarks</div>
-                <div className="mt-2 space-y-1 text-xs text-zinc-600">
-                  {benchmarks
-                    .sort((a,b)=> (a.region||'').localeCompare(b.region||''))
-                    .map(b=>(
-                      <div key={b.region} className="flex justify-between">
-                        <span>{b.region}</span>
-                        <span>Median {currencySymbol(b.region as any)}{(b.p50||0).toFixed(2)}/hr • n={b.n?.toLocaleString?.() ?? '—'}</span>
-                      </div>
-                    ))}
-                </div>
-              </CardBody></Card>
-            )}
+            {/* Community Benchmarks removed to avoid API/DB calls */}
 
             <div className="flex gap-2">
               <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
