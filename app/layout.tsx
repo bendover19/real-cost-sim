@@ -18,14 +18,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css"
         />
 
-        {/* Google AdSense (once per site) */}
-        <Script
-          id="adsense-init"
-          strategy="afterInteractive"
+        {/* Google AdSense (server-rendered so it's visible in View Source) */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
           crossOrigin="anonymous"
-        />
+        ></script>
       </head>
       <body className="min-h-screen flex flex-col">
         {/* Page content */}
