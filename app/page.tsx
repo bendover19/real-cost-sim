@@ -159,13 +159,32 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
 
 // ---------- Session helpers (cookie + localStorage) ----------
 function uuidv4() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  // use the global crypto in a TS-safe way (both browser + node webcrypto)
+  const gcrypto = (globalThis as any)?.crypto as
+    | { randomUUID?: () => string; getRandomValues?: (a: Uint8Array) => Uint8Array }
+    | undefined;
+
+  if (gcrypto?.randomUUID) return gcrypto.randomUUID();
+
   const buf = new Uint8Array(16);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(buf);
-  return [...buf].map((b, i) => (i === 6 ? (b & 0x0f) | 0x40 : i === 8 ? (b & 0x3f) | 0x80 : b))
-    .map((b, i) => (i === 4 || i === 6 || i === 8 || i === 10 ? "-" : "") + b.toString(16).padStart(2, "0"))
-    .join("");
+
+  if (gcrypto?.getRandomValues) {
+    gcrypto.getRandomValues(buf);
+  } else {
+    // fallback: Math.random
+    for (let i = 0; i < 16; i++) buf[i] = Math.floor(Math.random() * 256);
+  }
+
+  // per RFC4122 v4
+  buf[6] = (buf[6] & 0x0f) | 0x40;
+  buf[8] = (buf[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(buf, b => b.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex
+    .slice(8, 10)
+    .join("")}-${hex.slice(10, 16).join("")}`;
 }
+
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
   const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
