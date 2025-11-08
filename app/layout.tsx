@@ -17,6 +17,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css"
         />
+
+        {/* Google AdSense (once per site) */}
+        <Script
+          id="adsense-init"
+          strategy="afterInteractive"
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="min-h-screen flex flex-col">
         {/* Page content */}
@@ -42,14 +51,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             window.addEventListener('load', function () {
               if (window.cookieconsent) {
                 window.cookieconsent.initialise({
+                  type: "opt-in",
                   palette: { popup: { background: "#000" }, button: { background: "#f1d600" } },
                   theme: "classic",
                   content: {
                     message: "We use cookies to analyze traffic and show ads.",
                     dismiss: "Got it!",
+                    allow: "Allow cookies",
+                    deny: "Decline",
                     link: "Learn more",
                     href: "/privacy"
-                  }
+                  },
+                  law: { regionalLaw: true },
+                  location: true
                 });
               }
             });
