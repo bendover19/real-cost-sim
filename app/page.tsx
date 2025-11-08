@@ -704,7 +704,6 @@ export default function Page() {
         <div className="flex flex-wrap justify-between items-center gap-2 mt-6">
           <button onClick={back} className="px-3 py-2 rounded-lg border">Back</button>
           <div className="flex gap-2">
-            <button onClick={saveBaseline} className="px-3 py-2 rounded-lg border">Save my baseline</button>
             <button onClick={next} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
           </div>
         </div>
