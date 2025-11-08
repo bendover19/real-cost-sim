@@ -1,3 +1,22 @@
+<Script
+  src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"
+  strategy="afterInteractive"
+/>
+<Script id="cookieconsent-init" strategy="afterInteractive">
+  {`
+    window.cookieconsent.initialise({
+      palette: { popup: { background: "#000" }, button: { background: "#f1d600" } },
+      theme: "classic",
+      content: {
+        message: "We use cookies to analyze traffic and show ads.",
+        dismiss: "Got it!",
+        link: "Learn more",
+        href: "/privacy"
+      }
+    });
+  `}
+</Script>
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
