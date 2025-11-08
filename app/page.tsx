@@ -249,6 +249,14 @@ export default function Page() {
     setSessionId(getOrCreateSessionId());
   }, []);
 
+  // Auto-post baseline once, when the user reaches step >= 1
+useEffect(() => {
+  if (sessionId && !hasBaselinePosted && step >= 1 && !isSavingRef.current) {
+    postOnce();  // will upsert by session_id and set hasBaselinePosted
+  }
+}, [step, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
