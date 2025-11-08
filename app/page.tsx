@@ -592,7 +592,7 @@ export default function Page(){
                 className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? 'blur-sm select-none pointer-events-none' : ''}`}
               >
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
-                <div className="text-lg mt-1"">{currency}{Math.max(0,baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h</div>
+                <div className="text-lg mt-1">{currency}{Math.max(0,baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h</div>
                 <div className="text-lg mt-1">That's {currency}{baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.</div>
                 <div className="text-[11px] text-zinc-500 mt-1 italic">*Calculated as net discretionary pay per actual hour of life traded.</div>
                 {netMonthly>0 && (
