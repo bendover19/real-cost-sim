@@ -412,53 +412,43 @@ useEffect(() => {
 
   // --------- Submit logic (manual only) ----------
   function buildPayload() {
-    return {
-      session_id: sessionId || getOrCreateSessionId(), // belt & braces
-      land_source: landSource,
-      ab_variant: abVariant,
-      step_posted: step,
-      city_name: cityName || null,
-      region,
+  const sid = sessionId || getOrCreateSessionId();
+
+  return {
+    session_id: sid,
+    email,
+    region,
+    household,
+    take_home: netMonthly,
+    housing,
+    commute_mode:
+      transportMode === "remote"
+        ? "remote"
+        : transportMode === "pt"
+        ? "pt"
+        : transportMode === "walk"
+        ? "walk"
+        : "drive",
+    commute_monthly: commuteMonthly,
+    hours_week: hoursWeek,
+    drivers,
+    toggles: {
+      bills_included: billsIncluded,
       urbanicity,
       commute_context: commuteCtx,
-      rent_mul: rentMul,
-      commute_mul: commuteMul,
-      is_gross: isGross,
-      take_home_input: takeHome,
-      net_monthly: netMonthly,
-      household,
-      children_count: childrenCount,
-      children_age: childrenAge,
-      housing,
-      bills_included: billsIncluded,
-      commute_mode: transportMode,
-      commute_monthly: commuteMonthly,
-      wfh_utilities: wfhUtilities,
-      hours_week: hoursWeek,
-      drivers,
-      spends,
-      dependents_monthly: dependentsMonthly,
-      healthcare_monthly: healthcareMonthly,
-      us_health_plan: usHealthPlan,
-      us_health_override: usHealthcareOverride,
-      debt_monthly: debtMonthly,
-      student_loan: studentLoan,
       savings_rate: savingsRate,
-      savings_monthly: savingsMonthly,
-      bills_utilities: billsUtilities,
-      leftover,
-      effective_per_hour: effectivePerHour,
-      maintenance_pct: maintenancePct,
-      baseline_commute: baselineCommute,
-      baseline_leftover: baselineLeftover,
-      baseline_freedom: baselineFreedom,
-      delta_remote_1d: Math.round(baselineCommute * (1 / 5)),
-      delta_debt_refi: Math.round((debtMonthly + studentLoan) * 0.15),
-      delta_total:
-        Math.max(0, Math.round(baselineCommute * (1 / 5)) + Math.round((debtMonthly + studentLoan) * 0.15)),
-      email: email || null,
-    };
-  }
+      us_health_plan: usHealthPlan,
+    },
+    dependents_monthly: dependentsMonthly,
+    healthcare_monthly: healthcareMonthly,
+    debt_monthly: debtMonthly + studentLoan,
+    savings_monthly: savingsMonthly,
+    leftover,
+    effective_per_hour: effectivePerHour,
+    maintenance_pct: maintenancePct,
+  };
+}
+
 
   async function postOnce() {
     if (isSavingRef.current) return;
