@@ -18,8 +18,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css"
         />
       </head>
-      <body>
-        {children}
+      <body className="min-h-screen flex flex-col">
+        {/* Page content */}
+        <main className="flex-grow">{children}</main>
+
+        {/* Footer */}
+        <footer className="text-center text-sm text-zinc-500 py-8 border-t border-zinc-800">
+          <p>
+            © {new Date().getFullYear()} Real Cost Simulator —{" "}
+            <a href="/privacy" className="underline hover:text-zinc-300">
+              Privacy & Cookies Policy
+            </a>
+          </p>
+        </footer>
 
         {/* Cookie Consent JS */}
         <Script
