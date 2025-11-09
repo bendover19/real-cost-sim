@@ -6,11 +6,11 @@ import html2canvas from "html2canvas";
 
 /**
  * Real Cost Simulator — page.tsx (stable session + single-submit)
- * - No WebCrypto/DOM types (TS-safe)
- * - Session id stored in cookie + localStorage
- * - No auto-posts; only manual submit (baseline + optional email)
- * - Mutex prevents overlapping posts (helps with StrictMode)
- * - No percentiles/benchmarks; no Supabase imports
+ * - No Supabase client imports; server writes happen via /api/ingest
+ * - Session id stored in cookie + localStorage (no WebCrypto)
+ * - Manual post (and optional auto-post on step >= 1)
+ * - Mutex prevents overlapping posts (StrictMode-safe)
+ * - Percentiles/benchmarks removed
  */
 
 const INGEST_PATH = "/api/ingest";
@@ -76,7 +76,7 @@ const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string
   moneyPressure: { emoji: "💸", title: "Money pressure", sub: "BNPL/overdraft to smooth the month", color: "orange" },
 };
 
-// Wide slider limits per driver (covers outliers)
+// Wide slider limits per driver
 const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number }> = {
   belonging: { min: 0, max: 800, step: 5 },
   identity: { min: 0, max: 800, step: 5 },
@@ -87,7 +87,7 @@ const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number 
   moneyPressure: { min: 0, max: 300, step: 5 },
 };
 
-// Slider limits for variable spends (high-variance)
+// Slider limits for variable spends
 const SPEND_LIMITS: Record<SpendKey, { label: string; min: number; max: number; step: number }> = {
   pet: { label: "🐾 Pet costs (food, insurance, sitter/boarding, horse, etc.)", min: 0, max: 2000, step: 10 },
   therapy: { label: "🧠 Therapy / coaching / counselling", min: 0, max: 2000, step: 10 },
@@ -175,7 +175,6 @@ function getOrCreateSessionId(): string {
       window.localStorage.setItem("rcs_session_id", id);
     return id;
   } catch {
-    // last resort
     const id = "sid_" + Math.random().toString(36).slice(2);
     setCookie("rcs_sid", id);
     try {
@@ -188,7 +187,7 @@ function getOrCreateSessionId(): string {
 
 // ---------- Small primitives ----------
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur ${className || ""}`}>{children}</div>
+  <div className={`rounded-2xl border border-zinc-200 bg-white/80 backdrop-blur ${className || ""}`}>{children}</div>
 );
 const CardBody: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <div className={`p-5 ${className || ""}`}>{children}</div>
@@ -217,13 +216,13 @@ function BarChart({
   const left = Math.max(0, safeNet - used);
   return (
     <div className="space-y-2">
-      <div className="w-full h-6 rounded-lg overflow-hidden bg-zinc-800">
+      <div className="w-full h-6 rounded-lg overflow-hidden bg-zinc-200">
         <div className="h-6 bg-emerald-500 float-right" style={{ width: `${(left / safeNet) * 100}%` }} title={`Leftover ${currency}${left.toLocaleString()}`} />
         {slices.map(s => (
           <div key={s.label} className={`h-6 ${s.color} float-left`} style={{ width: `${(Math.max(0, s.value) / safeNet) * 100}%` }} title={`${s.label} ${currency}${Math.max(0, s.value).toLocaleString()}`} />
         ))}
       </div>
-      <div className="flex flex-wrap gap-3 text-xs text-zinc-300">
+      <div className="flex flex-wrap gap-3 text-xs text-zinc-600">
         {slices.map(s => (
           <div key={s.label} className="flex items-center gap-1"><span className={`inline-block w-3 h-3 rounded ${s.color}`} />{s.label} {currency}{Math.max(0, s.value).toLocaleString()}</div>
         ))}
@@ -243,20 +242,17 @@ export default function Page() {
   const [landSource, setLandSource] = useState<string>("unknown");
   const [abVariant, setAbVariant] = useState<"A" | "B">("A");
 
-  // Create + cache a guaranteed session id (cookie + LS); never empty
+  // Session id (cookie + LS)
   const [sessionId, setSessionId] = useState<string>("");
+  // Submit guard + baseline-posted flag (declare before effects)
+  const isSavingRef = useRef(false);
+  const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
+
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
   }, []);
 
-  // Auto-post baseline once, when the user reaches step >= 1
-useEffect(() => {
-  if (sessionId && !hasBaselinePosted && step >= 1 && !isSavingRef.current) {
-    postOnce();  // will upsert by session_id and set hasBaselinePosted
-  }
-}, [step, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
+  // UTM / A/B cookie
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
@@ -284,7 +280,7 @@ useEffect(() => {
   const [region, setRegion] = useState<RegionId>("UK");
   const [urbanicity, setUrbanicity] = useState<Urbanicity>("city");
   const [commuteCtx, setCommuteCtx] = useState<CommuteContext>("mixed");
-  const regionData = useMemo(() => regions.find(r => r.id === region) || regions[0], [region]);
+  const regionData = useMemo(() => regions.find((r) => r.id === region) || regions[0], [region]);
   const currency = currencySymbol(region);
 
   // Core inputs
@@ -320,10 +316,6 @@ useEffect(() => {
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-
-  // Submit guard
-  const isSavingRef = useRef(false);
-  const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
 
   // Derived
   const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
@@ -401,7 +393,7 @@ useEffect(() => {
     return Math.round(s1 + s2 + s3 + s4);
   }, [effectivePerHour, leftover, netMonthly, maintenancePct, hoursWeek]);
 
-  const next = () => setStep((s) => Math.min(3, s + 1));
+  const next = () => setStep((s) => Math.min(2, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   async function makeShareCard() {
@@ -410,45 +402,39 @@ useEffect(() => {
     setImageUrl(canvas.toDataURL("image/png"));
   }
 
-  // --------- Submit logic (manual only) ----------
+  // --------- Submit logic ----------
   function buildPayload() {
-  const sid = sessionId || getOrCreateSessionId();
-
-  return {
-    session_id: sid,
-    email,
-    region,
-    household,
-    take_home: netMonthly,
-    housing,
-    commute_mode:
-      transportMode === "remote"
-        ? "remote"
-        : transportMode === "pt"
-        ? "pt"
-        : transportMode === "walk"
-        ? "walk"
-        : "drive",
-    commute_monthly: commuteMonthly,
-    hours_week: hoursWeek,
-    drivers,
-    toggles: {
-      bills_included: billsIncluded,
-      urbanicity,
-      commute_context: commuteCtx,
-      savings_rate: savingsRate,
-      us_health_plan: usHealthPlan,
-    },
-    dependents_monthly: dependentsMonthly,
-    healthcare_monthly: healthcareMonthly,
-    debt_monthly: debtMonthly + studentLoan,
-    savings_monthly: savingsMonthly,
-    leftover,
-    effective_per_hour: effectivePerHour,
-    maintenance_pct: maintenancePct,
-  };
-}
-
+    const sid = sessionId || getOrCreateSessionId();
+    return {
+      session_id: sid,
+      email,
+      region,
+      household,
+      take_home: netMonthly,
+      housing,
+      commute_mode:
+        transportMode === "remote" ? "remote" :
+        transportMode === "pt" ? "pt" :
+        transportMode === "walk" ? "walk" : "drive",
+      commute_monthly: commuteMonthly,
+      hours_week: hoursWeek,
+      drivers,
+      toggles: {
+        bills_included: billsIncluded,
+        urbanicity,
+        commute_context: commuteCtx,
+        savings_rate: savingsRate,
+        us_health_plan: usHealthPlan,
+      },
+      dependents_monthly: dependentsMonthly,
+      healthcare_monthly: healthcareMonthly,
+      debt_monthly: debtMonthly + studentLoan,
+      savings_monthly: savingsMonthly,
+      leftover,
+      effective_per_hour: effectivePerHour,
+      maintenance_pct: maintenancePct,
+    };
+  }
 
   async function postOnce() {
     if (isSavingRef.current) return;
@@ -474,14 +460,19 @@ useEffect(() => {
   function saveBaseline() {
     if (!hasBaselinePosted) postOnce();
   }
-
   function saveEmail() {
     if (!email) return;
     setEmailSaved(true);
-    postOnce(); // server upserts by session_id, so this updates same row
+    postOnce(); // upsert by session_id updates same row
   }
 
-  // --- Validation helpers ---
+  // Auto-post once when user reaches step >= 1 (optional; safe with mutex)
+  useEffect(() => {
+    if (sessionId && !hasBaselinePosted && step >= 1 && !isSavingRef.current) {
+      postOnce();
+    }
+  }, [step, sessionId, hasBaselinePosted]);
+
   const takeHomeWeird = (!isGross && takeHome > 20000) || (isGross && takeHome > 30000);
   const housingWeird = housingTouched && housing < 300 && !(["family", "share"] as Household[]).includes(household);
   const hoursWeird = hoursWeek < 30 || hoursWeek > 80;
@@ -490,82 +481,113 @@ useEffect(() => {
     ? cityName
     : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
-  // ---------- Screens ----------
-const Start = (
-  <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40 dark:from-zinc-900 dark:to-zinc-900">
-    <CardBody>
-      <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
-        <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
-      </div>
-
-      <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-300 bg-clip-text text-transparent">
-        The Real Cost of Working
-      </h1>
-
-      <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
-
-      {/* NEW descriptive intro content for Google / SEO */}
-      <div className="mt-6 text-zinc-700 dark:text-zinc-300 space-y-3 leading-relaxed">
-        <p>
-          Most people never see how much of their paycheck quietly disappears into rent, transport, debt,
-          and time spent commuting. Your payslip ≠ your pay.
-        </p>
-        <p>
-          The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount
-          of income you actually keep after all the hidden costs of working life. It’s designed to help you
-          make smarter choices about where you live, how you work, and what really pays off.
-        </p>
-        <p>
-          In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate
-          into more free time and financial breathing room. It’s a transparent view of what your work is truly
-          worth.
-        </p>
-      </div>
-
-      {/* Existing intro and form */}
-      <div className="space-y-6 mt-6">
-        <p className="text-zinc-700 dark:text-zinc-300">
-          See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of staying employable.
-        </p>
-        <p className="text-zinc-700 dark:text-zinc-300 font-medium">
-          In <span className="font-bold text-lg text-zinc-900 dark:text-white">one minute</span> you’ll get the truth, then what to change.
-        </p>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm">City name (optional)</label>
-            <input
-              value={cityName}
-              onChange={(e) => setCityName(e.target.value)}
-              placeholder="e.g., London, Berlin, NYC"
-              className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900"
-            />
-            <div className="text-[11px] text-zinc-500 mt-1">Used for your badge only.</div>
-          </div>
-          <div>
-            <label className="text-sm">Country/Region</label>
-            <select
-              value={region}
-              onChange={(e) => setRegion(e.target.value as RegionId)}
-              className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900"
-            >
-              {regions.map((r) => (
-                <option key={r.id} value={r.id}>{r.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm">Area type</label>
-            <select
-              value={urbanicity}
-              onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
-              cla
-
-
-  const CoreInputs = (
-    <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40 dark:from-zinc-900 dark:to-zinc-900">
+  // ---------- Sections ----------
+  const StartSection = () => (
+    <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
-        <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden"><div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} /></div>
+        <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
+          <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
+        </div>
+
+        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">
+          The Real Cost of Working
+        </h1>
+
+        <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
+
+        {/* Descriptive intro (for reviewers/SEO) */}
+        <div className="mt-6 text-zinc-700 space-y-3 leading-relaxed">
+          <p>
+            Most people never see how much of their paycheck quietly disappears into rent, transport, debt,
+            and time spent commuting. Your payslip ≠ your pay.
+          </p>
+          <p>
+            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount
+            of income you actually keep after all the hidden costs of working life. It’s designed to help you
+            make smarter choices about where you live, how you work, and what really pays off.
+          </p>
+          <p>
+            In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate
+            into more free time and financial breathing room. It’s a transparent view of what your work is truly
+            worth.
+          </p>
+        </div>
+
+        {/* Existing intro + form */}
+        <div className="space-y-6 mt-6">
+          <p className="text-zinc-700">
+            See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of staying employable.
+          </p>
+          <p className="text-zinc-700 font-medium">
+            In <span className="font-bold text-lg text-zinc-900">one minute</span> you’ll get the truth, then what to change.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm">City name (optional)</label>
+              <input
+                value={cityName}
+                onChange={(e) => setCityName(e.target.value)}
+                placeholder="e.g., London, Berlin, NYC"
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              />
+              <div className="text-[11px] text-zinc-500 mt-1">Used for your badge only.</div>
+            </div>
+            <div>
+              <label className="text-sm">Country/Region</label>
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value as RegionId)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
+                {regions.map((r) => (
+                  <option key={r.id} value={r.id}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm">Area type</label>
+              <select
+                value={urbanicity}
+                onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
+                {Object.entries(URBANICITY).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm">Commute context</label>
+              <select
+                value={commuteCtx}
+                onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
+                {Object.entries(COMMUTE_CTX).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+              <div className="text-[11px] text-zinc-500 mt-1">Affects commute costs in baseline.</div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button onClick={() => { setStep(1); saveBaseline(); }} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600">
+              Start my month
+            </button>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+
+  const CoreInputs = () => (
+    <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
+      <CardBody>
+        <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
+          <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
+        </div>
         <h2 className="mt-4 text-xl font-semibold">Basics of your month</h2>
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-amber-400 to-amber-600" />
 
@@ -578,7 +600,7 @@ const Start = (
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
-              <input type="number" value={takeHome === 0 ? "" : takeHome} onChange={(e) => { const v = e.target.value; setTakeHome(v === "" ? 0 : Number(v)); }} className="w-full rounded-lg border p-2 bg-white dark:bg-zinc-900" />
+              <input type="number" value={takeHome === 0 ? "" : takeHome} onChange={(e) => { const v = e.target.value; setTakeHome(v === "" ? 0 : Number(v)); }} className="w-full rounded-lg border p-2 bg-white" />
             </div>
             {takeHomeWeird && <div className="text-[11px] text-amber-600 mt-1">Looks unusually high for monthly. If yearly, divide by 12.</div>}
             <p className="text-xs text-zinc-500 mt-1">If Gross selected, we estimate Net with a quick regional factor.</p>
@@ -588,7 +610,7 @@ const Start = (
             <label className="text-sm">Your rent or mortgage each month (your share)</label>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-zinc-500">{currency}</span>
-              <input type="number" value={housing === 0 ? "" : housing} onChange={(e) => { const v = e.target.value; setHousingTouched(true); setHousing(v === "" ? 0 : Number(v)); }} className="w-full rounded-lg border p-2 bg-white dark:bg-zinc-900" />
+              <input type="number" value={housing === 0 ? "" : housing} onChange={(e) => { const v = e.target.value; setHousingTouched(true); setHousing(v === "" ? 0 : Number(v)); }} className="w-full rounded-lg border p-2 bg-white" />
             </div>
             <p className="text-xs text-zinc-500 mt-1">
               Typical for {regions.find((r) => r.id === region)?.label} × {URBANICITY[urbanicity].label}: {currency}{Math.round(suggestedHousing(region, household) * rentMul).toLocaleString()} ·{" "}
@@ -696,12 +718,12 @@ const Start = (
             const meta = DRIVER_META[key];
             const lim = DRIVER_LIMITS[key];
             const border = `border-${meta.color}-300`;
-            const bg = `bg-${meta.color}-50 dark:bg-${meta.color}-950/30`;
-            const titleClr = `text-${meta.color}-800 dark:text-${meta.color}-300`;
+            const bg = `bg-${meta.color}-50`;
+            const titleClr = `text-${meta.color}-800`;
             return (
               <div key={key} className={`border rounded-2xl p-4 shadow-sm ${border} ${bg}`}>
                 <div className={`text-sm font-medium flex items-center gap-2 ${titleClr}`}><span className="text-lg" aria-hidden>{meta.emoji}</span>{meta.title}</div>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-3">{meta.sub}</div>
+                <div className="text-xs text-zinc-600 mb-3">{meta.sub}</div>
                 <input type="range" min={lim.min} max={lim.max} step={lim.step} value={drivers[key]} onChange={(e) => setDrivers((d) => ({ ...d, [key]: Number(e.target.value) }))} className="w-full" />
                 <div className="text-xs text-zinc-500 mt-1">Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}{DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}{lim.min}–{currency}{lim.max}</div>
               </div>
@@ -727,34 +749,22 @@ const Start = (
         <div className="flex flex-wrap justify-between items-center gap-2 mt-6">
           <button onClick={back} className="px-3 py-2 rounded-lg border">Back</button>
           <div className="flex gap-2">
-            <button onClick={next} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
+            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
           </div>
         </div>
       </CardBody>
     </Card>
   );
 
-  // --- Challenge Mode state ---
-  const [simRemoteDays, setSimRemoteDays] = useState<number>(0);
-  const [simRentDelta, setSimRentDelta] = useState<number>(0);
-  const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0);
-  const simNet = Math.max(0, netMonthly + simIncomeDelta);
-  const simCommute = Math.max(0, baselineCommute * Math.max(0, (5 - simRemoteDays) / 5));
-  const simHousing = Math.max(0, housing + simRentDelta);
-  const simLeftover = Math.round(
-    simNet - simHousing - simCommute - maintenanceSum - dependentsMonthly - healthcareMonthly - debtMonthly - studentLoan - savingsMonthly
-  );
-  const simFreedom = Math.round((simLeftover / Math.max(1, hoursPerMonth)) * 100) / 100;
-
-  const Reveal = (
-    <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40 dark:from-zinc-900 dark:to-zinc-900">
+  const RevealSection = () => (
+    <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden"><div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} /></div>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-4">
           <div>
             <div className="flex items-center gap-2 text-xs text-zinc-600">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border">{badgeLeft}</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border">PT baseline</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">{badgeLeft}</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">PT baseline</span>
             </div>
             <h2 className="text-xl font-semibold mt-2">Your month, in plain numbers</h2>
             <p className="text-sm text-zinc-500 max-w-md">Standardised baseline shows Public Transport + Typical behaviours for your area. Your choices change the deltas.</p>
@@ -764,12 +774,12 @@ const Start = (
               placeholder={abVariant === "A" ? "you@email.com — get the 1-page plan" : "Email to unblur your fixes"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-72 px-4 py-2 rounded-lg border bg-white dark:bg-zinc-900"
+              className="w-72 px-4 py-2 rounded-lg border bg-white"
             />
             <button
               onClick={saveEmail}
               className={`px-4 py-2 rounded-lg font-medium transition ${
-                emailSaved ? "border border-emerald-600 text-emerald-600 bg-white dark:bg-zinc-900" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
               }`}
             >
               {emailSaved ? (abVariant === "A" ? "Email saved" : "Saved") : (abVariant === "A" ? "Email me the 1-page plan" : "Unlock my plan")}
@@ -791,8 +801,6 @@ const Start = (
                   <div className="text-3xl font-bold mt-1">Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.</div>
                 )}
 
-                {/* No percentiles/benchmarks */}
-
                 <div className="mt-4">
                   <div className="text-xs text-zinc-400 mb-2">If you do nothing, here’s where it goes</div>
                   <BarChart
@@ -813,7 +821,7 @@ const Start = (
               {/* Overlay lock prompt */}
               {!emailSaved && (
                 <div className="absolute inset-0 grid place-items-center">
-                  <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4">
+                  <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4 text-white">
                     <div className="text-3xl">🔒</div>
                     <div className="mt-1 font-semibold">Unlock your personalised report</div>
                     <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
@@ -821,7 +829,7 @@ const Start = (
                       <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
                       <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
                     </div>
-                    <div className="text-[11px] text-zinc-400 mt-2">One email. No spam — just your PDF and a few tips.</div>
+                    <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
                   </div>
                 </div>
               )}
@@ -891,17 +899,18 @@ const Start = (
     </Card>
   );
 
+  // ---------- Render ----------
   return (
-    <div className="min-h-screen text-zinc-900 dark:text-zinc-50 py-10
-      bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]
-      dark:bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.12),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.10),transparent_45%)]">
+    <div
+      className="min-h-screen text-zinc-900 py-10
+      bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]"
+    >
       <div className="max-w-5xl mx-auto px-4">
         <AnimatePresence mode="wait">
           <motion.div key={step} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-            {step === 0 && Start}
-            {step === 1 && CoreInputs}
-            {step === 2 && <div className="space-y-4">{CoreInputs}</div>}
-            {step >= 3 && Reveal}
+            {step === 0 && <StartSection />}
+            {step === 1 && <CoreInputs />}
+            {step === 2 && <RevealSection />}
           </motion.div>
         </AnimatePresence>
       </div>
