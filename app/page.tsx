@@ -491,51 +491,76 @@ useEffect(() => {
     : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
   // ---------- Screens ----------
-  const Start = (
-    <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40 dark:from-zinc-900 dark:to-zinc-900">
-      <CardBody>
-        <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden"><div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} /></div>
-        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-300 bg-clip-text text-transparent">The Real Cost of Working</h1>
-        <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
-        <div className="space-y-6 mt-6">
-          <p className="text-zinc-700 dark:text-zinc-300">Your payslip ≠ your pay.</p>
-          <p className="text-zinc-700 dark:text-zinc-300">See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of staying employable.</p>
-          <p className="text-zinc-700 dark:text-zinc-300 font-medium">In <span className="font-bold text-lg text-zinc-900 dark:text-white">one minute</span> you’ll get the truth, then what to change.</p>
+const Start = (
+  <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40 dark:from-zinc-900 dark:to-zinc-900">
+    <CardBody>
+      <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
+        <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
+      </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm">City name (optional)</label>
-              <input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="e.g., London, Berlin, NYC" className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900" />
-              <div className="text-[11px] text-zinc-500 mt-1">Used for your badge only.</div>
-            </div>
-            <div>
-              <label className="text-sm">Country/Region</label>
-              <select value={region} onChange={(e) => setRegion(e.target.value as RegionId)} className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900">
-                {regions.map((r) => (<option key={r.id} value={r.id}>{r.label}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm">Area type</label>
-              <select value={urbanicity} onChange={(e) => setUrbanicity(e.target.value as Urbanicity)} className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900">
-                {Object.entries(URBANICITY).map(([k, v]) => (<option key={k} value={k}>{v.label}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm">Commute context</label>
-              <select value={commuteCtx} onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)} className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900">
-                {Object.entries(COMMUTE_CTX).map(([k, v]) => (<option key={k} value={k}>{v.label}</option>))}
-              </select>
-              <div className="text-[11px] text-zinc-500 mt-1">Affects commute costs in baseline.</div>
-            </div>
-          </div>
+      <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-300 bg-clip-text text-transparent">
+        The Real Cost of Working
+      </h1>
 
-          <div className="flex justify-end pt-2">
-            <button onClick={() => setStep(1)} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600">Start my month</button>
+      <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
+
+      {/* NEW descriptive intro content for Google / SEO */}
+      <div className="mt-6 text-zinc-700 dark:text-zinc-300 space-y-3 leading-relaxed">
+        <p>
+          Most people never see how much of their paycheck quietly disappears into rent, transport, debt,
+          and time spent commuting. Your payslip ≠ your pay.
+        </p>
+        <p>
+          The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount
+          of income you actually keep after all the hidden costs of working life. It’s designed to help you
+          make smarter choices about where you live, how you work, and what really pays off.
+        </p>
+        <p>
+          In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate
+          into more free time and financial breathing room. It’s a transparent view of what your work is truly
+          worth.
+        </p>
+      </div>
+
+      {/* Existing intro and form */}
+      <div className="space-y-6 mt-6">
+        <p className="text-zinc-700 dark:text-zinc-300">
+          See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of staying employable.
+        </p>
+        <p className="text-zinc-700 dark:text-zinc-300 font-medium">
+          In <span className="font-bold text-lg text-zinc-900 dark:text-white">one minute</span> you’ll get the truth, then what to change.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm">City name (optional)</label>
+            <input
+              value={cityName}
+              onChange={(e) => setCityName(e.target.value)}
+              placeholder="e.g., London, Berlin, NYC"
+              className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900"
+            />
+            <div className="text-[11px] text-zinc-500 mt-1">Used for your badge only.</div>
           </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
+          <div>
+            <label className="text-sm">Country/Region</label>
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value as RegionId)}
+              className="w-full mt-2 rounded-lg border p-2 bg-white dark:bg-zinc-900"
+            >
+              {regions.map((r) => (
+                <option key={r.id} value={r.id}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm">Area type</label>
+            <select
+              value={urbanicity}
+              onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
+              cla
+
 
   const CoreInputs = (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40 dark:from-zinc-900 dark:to-zinc-900">
