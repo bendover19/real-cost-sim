@@ -630,7 +630,7 @@ export default function Page() {
 
         <div className="grid md:grid-cols-2 gap-5 mt-6">
           <div>
-            <label className="text-sm">Income number is</label>
+            <label className="text-sm">Income per month is</label>
             <div className="flex gap-2 mt-2 text-sm">
               <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
                 Net (after tax)
