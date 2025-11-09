@@ -138,14 +138,7 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
 // ---------- Session helpers (no WebCrypto) ----------
 let __sidCounter = 0;
 function simpleId() {
-  return (
-    "sid_" +
-    Date.now().toString(36) +
-    "_" +
-    Math.random().toString(36).slice(2) +
-    "_" +
-    (__sidCounter++).toString(36)
-  );
+  return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
 }
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
@@ -160,26 +153,22 @@ function setCookie(name: string, value: string, days = 365) {
 function getOrCreateSessionId(): string {
   try {
     const fromCookie = getCookie("rcs_sid");
-    const fromLS =
-      typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
+    const fromLS = typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
     const existing = fromCookie || fromLS;
     if (existing) {
       if (!fromCookie) setCookie("rcs_sid", existing);
-      if (!fromLS && typeof window !== "undefined")
-        window.localStorage.setItem("rcs_session_id", existing);
+      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
       return existing;
     }
     const id = simpleId();
     setCookie("rcs_sid", id);
-    if (typeof window !== "undefined")
-      window.localStorage.setItem("rcs_session_id", id);
+    if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
     return id;
   } catch {
     const id = "sid_" + Math.random().toString(36).slice(2);
     setCookie("rcs_sid", id);
     try {
-      if (typeof window !== "undefined")
-        window.localStorage.setItem("rcs_session_id", id);
+      if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
     } catch {}
     return id;
   }
@@ -193,14 +182,33 @@ const CardBody: React.FC<{ children: React.ReactNode; className?: string }> = ({
   <div className={`p-5 ${className || ""}`}>{children}</div>
 );
 const Money: React.FC<{ value: number; currency: string }> = ({ value, currency }) => (
-  <span className="tabular-nums font-semibold">{currency}{Math.max(0, value).toLocaleString()}</span>
+  <span className="tabular-nums font-semibold">
+    {currency}
+    {Math.max(0, value).toLocaleString()}
+  </span>
 );
 
 // ---------- Chart ----------
 function BarChart({
-  currency, net, housing, commute, maintenance, dependents, healthcare, debt, savings,
+  currency,
+  net,
+  housing,
+  commute,
+  maintenance,
+  dependents,
+  healthcare,
+  debt,
+  savings,
 }: {
-  currency: string; net: number; housing: number; commute: number; maintenance: number; dependents: number; healthcare: number; debt: number; savings: number;
+  currency: string;
+  net: number;
+  housing: number;
+  commute: number;
+  maintenance: number;
+  dependents: number;
+  healthcare: number;
+  debt: number;
+  savings: number;
 }) {
   const safeNet = Math.max(1, net);
   const slices = [
@@ -218,15 +226,23 @@ function BarChart({
     <div className="space-y-2">
       <div className="w-full h-6 rounded-lg overflow-hidden bg-zinc-200">
         <div className="h-6 bg-emerald-500 float-right" style={{ width: `${(left / safeNet) * 100}%` }} title={`Leftover ${currency}${left.toLocaleString()}`} />
-        {slices.map(s => (
+        {slices.map((s) => (
           <div key={s.label} className={`h-6 ${s.color} float-left`} style={{ width: `${(Math.max(0, s.value) / safeNet) * 100}%` }} title={`${s.label} ${currency}${Math.max(0, s.value).toLocaleString()}`} />
         ))}
       </div>
       <div className="flex flex-wrap gap-3 text-xs text-zinc-600">
-        {slices.map(s => (
-          <div key={s.label} className="flex items-center gap-1"><span className={`inline-block w-3 h-3 rounded ${s.color}`} />{s.label} {currency}{Math.max(0, s.value).toLocaleString()}</div>
+        {slices.map((s) => (
+          <div key={s.label} className="flex items-center gap-1">
+            <span className={`inline-block w-3 h-3 rounded ${s.color}`} />
+            {s.label} {currency}
+            {Math.max(0, s.value).toLocaleString()}
+          </div>
         ))}
-        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-emerald-500" />Leftover {currency}{Math.max(0, left).toLocaleString()}</div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-emerald-500" />
+          Leftover {currency}
+          {Math.max(0, left).toLocaleString()}
+        </div>
       </div>
       <div className="clear-both" />
     </div>
@@ -244,7 +260,7 @@ export default function Page() {
 
   // Session id (cookie + LS)
   const [sessionId, setSessionId] = useState<string>("");
-  // Submit guard + baseline-posted flag (declare before effects)
+  // Submit guard + baseline-posted flag
   const isSavingRef = useRef(false);
   const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
 
@@ -259,10 +275,14 @@ export default function Page() {
       const utm = url.searchParams.get("utm_source") || url.searchParams.get("ref");
       if (utm) setLandSource(utm);
       const params = new URLSearchParams(url.search);
-      const qCity = params.get("city"); if (qCity) setCityName(qCity);
-      const qRegion = params.get("region") as RegionId | null; if (qRegion && regions.find(r => r.id === qRegion)) setRegion(qRegion);
-      const qUrban = params.get("urban") as Urbanicity | null; if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
-      const qCtx = params.get("ctx") as CommuteContext | null; if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
+      const qCity = params.get("city");
+      if (qCity) setCityName(qCity);
+      const qRegion = params.get("region") as RegionId | null;
+      if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
+      const qUrban = params.get("urban") as Urbanicity | null;
+      if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
+      const qCtx = params.get("ctx") as CommuteContext | null;
+      if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
     } catch {}
     try {
       const existing = document.cookie.match(/rcs_ab=([AB])/);
@@ -316,6 +336,11 @@ export default function Page() {
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // --- Challenge mode (what-if sliders) ---
+  const [simRemoteDays, setSimRemoteDays] = useState<number>(0); // 0–5
+  const [simRentDelta, setSimRentDelta] = useState<number>(0); // monthly +/- to housing
+  const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0); // monthly +/- to income
 
   // Derived
   const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
@@ -378,6 +403,33 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [baselineLeftover, hoursPerMonth]);
 
+  // --- Challenge-mode derived values ---
+  const simCommute = useMemo(
+    () => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))),
+    [baselineCommute, simRemoteDays]
+  );
+  const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
+  const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
+  const simLeftover = useMemo(
+    () =>
+      Math.round(
+        simNet -
+          simHousing -
+          simCommute -
+          maintenanceSum -
+          dependentsMonthly -
+          healthcareMonthly -
+          debtMonthly -
+          studentLoan -
+          savingsMonthly
+      ),
+    [simNet, simHousing, simCommute, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
+  );
+  const simFreedom = useMemo(() => {
+    const per = simLeftover / Math.max(1, hoursPerMonth);
+    return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
+  }, [simLeftover, hoursPerMonth]);
+
   // Life Efficiency Score
   function norm(x: number, min: number, max: number) {
     if (!isFinite(x)) return 0;
@@ -412,10 +464,7 @@ export default function Page() {
       household,
       take_home: netMonthly,
       housing,
-      commute_mode:
-        transportMode === "remote" ? "remote" :
-        transportMode === "pt" ? "pt" :
-        transportMode === "walk" ? "walk" : "drive",
+      commute_mode: transportMode === "remote" ? "remote" : transportMode === "pt" ? "pt" : transportMode === "walk" ? "walk" : "drive",
       commute_monthly: commuteMonthly,
       hours_week: hoursWeek,
       drivers,
@@ -425,6 +474,8 @@ export default function Page() {
         commute_context: commuteCtx,
         savings_rate: savingsRate,
         us_health_plan: usHealthPlan,
+        land_source: landSource,
+        ab_variant: abVariant,
       },
       dependents_monthly: dependentsMonthly,
       healthcare_monthly: healthcareMonthly,
@@ -477,9 +528,7 @@ export default function Page() {
   const housingWeird = housingTouched && housing < 300 && !(["family", "share"] as Household[]).includes(household);
   const hoursWeird = hoursWeek < 30 || hoursWeek > 80;
 
-  const badgeLeft = cityName
-    ? cityName
-    : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
+  const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
   // ---------- Sections ----------
   const StartSection = () => (
@@ -489,27 +538,20 @@ export default function Page() {
           <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
         </div>
 
-        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">
-          The Real Cost of Working
-        </h1>
+        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">The Real Cost of Working</h1>
 
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
 
         {/* Descriptive intro (for reviewers/SEO) */}
         <div className="mt-6 text-zinc-700 space-y-3 leading-relaxed">
+          <p>Most people never see how much of their paycheck quietly disappears into rent, transport, debt, and time spent commuting. Your payslip ≠ your pay.</p>
           <p>
-            Most people never see how much of their paycheck quietly disappears into rent, transport, debt,
-            and time spent commuting. Your payslip ≠ your pay.
+            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount of income you actually keep after all the hidden costs of
+            working life. It’s designed to help you make smarter choices about where you live, how you work, and what really pays off.
           </p>
           <p>
-            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount
-            of income you actually keep after all the hidden costs of working life. It’s designed to help you
-            make smarter choices about where you live, how you work, and what really pays off.
-          </p>
-          <p>
-            In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate
-            into more free time and financial breathing room. It’s a transparent view of what your work is truly
-            worth.
+            In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate into more free time and financial breathing room. It’s a
+            transparent view of what your work is truly worth.
           </p>
         </div>
 
@@ -525,47 +567,36 @@ export default function Page() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm">City name (optional)</label>
-              <input
-                value={cityName}
-                onChange={(e) => setCityName(e.target.value)}
-                placeholder="e.g., London, Berlin, NYC"
-                className="w-full mt-2 rounded-lg border p-2 bg-white"
-              />
+              <input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="e.g., London, Berlin, NYC" className="w-full mt-2 rounded-lg border p-2 bg-white" />
               <div className="text-[11px] text-zinc-500 mt-1">Used for your badge only.</div>
             </div>
             <div>
               <label className="text-sm">Country/Region</label>
-              <select
-                value={region}
-                onChange={(e) => setRegion(e.target.value as RegionId)}
-                className="w-full mt-2 rounded-lg border p-2 bg-white"
-              >
+              <select value={region} onChange={(e) => setRegion(e.target.value as RegionId)} className="w-full mt-2 rounded-lg border p-2 bg-white">
                 {regions.map((r) => (
-                  <option key={r.id} value={r.id}>{r.label}</option>
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="text-sm">Area type</label>
-              <select
-                value={urbanicity}
-                onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
-                className="w-full mt-2 rounded-lg border p-2 bg-white"
-              >
+              <select value={urbanicity} onChange={(e) => setUrbanicity(e.target.value as Urbanicity)} className="w-full mt-2 rounded-lg border p-2 bg-white">
                 {Object.entries(URBANICITY).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="text-sm">Commute context</label>
-              <select
-                value={commuteCtx}
-                onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)}
-                className="w-full mt-2 rounded-lg border p-2 bg-white"
-              >
+              <select value={commuteCtx} onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)} className="w-full mt-2 rounded-lg border p-2 bg-white">
                 {Object.entries(COMMUTE_CTX).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
                 ))}
               </select>
               <div className="text-[11px] text-zinc-500 mt-1">Affects commute costs in baseline.</div>
@@ -573,7 +604,13 @@ export default function Page() {
           </div>
 
           <div className="flex justify-end pt-2">
-            <button onClick={() => { setStep(1); saveBaseline(); }} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600">
+            <button
+              onClick={() => {
+                setStep(1);
+                saveBaseline();
+              }}
+              className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600"
+            >
               Start my month
             </button>
           </div>
@@ -595,12 +632,24 @@ export default function Page() {
           <div>
             <label className="text-sm">Income number is</label>
             <div className="flex gap-2 mt-2 text-sm">
-              <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Net (after tax)</button>
-              <button onClick={() => setIsGross(true)} className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Gross (before tax)</button>
+              <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                Net (after tax)
+              </button>
+              <button onClick={() => setIsGross(true)} className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                Gross (before tax)
+              </button>
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
-              <input type="number" value={takeHome === 0 ? "" : takeHome} onChange={(e) => { const v = e.target.value; setTakeHome(v === "" ? 0 : Number(v)); }} className="w-full rounded-lg border p-2 bg-white" />
+              <input
+                type="number"
+                value={takeHome === 0 ? "" : takeHome}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTakeHome(v === "" ? 0 : Number(v));
+                }}
+                className="w-full rounded-lg border p-2 bg-white"
+              />
             </div>
             {takeHomeWeird && <div className="text-[11px] text-amber-600 mt-1">Looks unusually high for monthly. If yearly, divide by 12.</div>}
             <p className="text-xs text-zinc-500 mt-1">If Gross selected, we estimate Net with a quick regional factor.</p>
@@ -610,30 +659,61 @@ export default function Page() {
             <label className="text-sm">Your rent or mortgage each month (your share)</label>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-zinc-500">{currency}</span>
-              <input type="number" value={housing === 0 ? "" : housing} onChange={(e) => { const v = e.target.value; setHousingTouched(true); setHousing(v === "" ? 0 : Number(v)); }} className="w-full rounded-lg border p-2 bg-white" />
+              <input
+                type="number"
+                value={housing === 0 ? "" : housing}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setHousingTouched(true);
+                  setHousing(v === "" ? 0 : Number(v));
+                }}
+                className="w-full rounded-lg border p-2 bg-white"
+              />
             </div>
             <p className="text-xs text-zinc-500 mt-1">
-              Typical for {regions.find((r) => r.id === region)?.label} × {URBANICITY[urbanicity].label}: {currency}{Math.round(suggestedHousing(region, household) * rentMul).toLocaleString()} ·{" "}
-              <button type="button" className="underline" onClick={() => { setHousing(Math.round(suggestedHousing(region, household) * rentMul)); setHousingTouched(true); }}>Use this</button>
+              Typical for {regions.find((r) => r.id === region)?.label} × {URBANICITY[urbanicity].label}: {currency}
+              {Math.round(suggestedHousing(region, household) * rentMul).toLocaleString()} ·{" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  setHousing(Math.round(suggestedHousing(region, household) * rentMul));
+                  setHousingTouched(true);
+                }}
+              >
+                Use this
+              </button>
             </p>
             {housingWeird && <div className="text-[11px] text-amber-600 mt-1">That looks unusually low. Continue if intentional.</div>}
-            <label className="mt-2 inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={billsIncluded} onChange={(e) => setBillsIncluded(e.target.checked)} /> Bills included?</label>
+            <label className="mt-2 inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={billsIncluded} onChange={(e) => setBillsIncluded(e.target.checked)} /> Bills included?
+            </label>
           </div>
 
           <div>
             <label className="text-sm">Hours you work each week, including commute</label>
             <input type="range" min={30} max={80} step={1} value={hoursWeek} onChange={(e) => setHoursWeek(Number(e.target.value))} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">{hoursWeek} hours / week → ~{hoursPerMonth} per month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              {hoursWeek} hours / week → ~{hoursPerMonth} per month
+            </div>
             {hoursWeird && <div className="text-[11px] text-amber-600 mt-1">Outside usual range — continue if intentional.</div>}
           </div>
 
           <div>
             <label className="text-sm">Getting to work</label>
             <div className="flex gap-2 flex-wrap mt-2">
-              <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Public transport</button>
-              <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Drive / taxi</button>
-              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
-              <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Remote / no commute</button>
+              <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                Public transport
+              </button>
+              <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                Drive / taxi
+              </button>
+              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                Walk / Bike
+              </button>
+              <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                Remote / no commute
+              </button>
             </div>
             {transportMode === "remote" && (
               <div className="mt-2">
@@ -642,14 +722,25 @@ export default function Page() {
                 <div className="text-[11px] text-zinc-500">Covers heating/electric/internet share.</div>
               </div>
             )}
-            <div className="text-xs text-zinc-500 mt-1">Commute est.: <Money value={commuteMonthly} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Home & kids</label>
             <div className="flex gap-2 flex-wrap mt-2">
-              {(["solo", "partner", "partnerKids", "singleParent", "share", "family"] as Household[]).map(h => (
-                <button key={h} onClick={() => { setHousehold(h); if (h === "partner" || h === "solo" || h === "share" || h === "family") { setChildrenCount(0); } }} className={`px-3 py-2 rounded-full border text-sm ${household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+              {(["solo", "partner", "partnerKids", "singleParent", "share", "family"] as Household[]).map((h) => (
+                <button
+                  key={h}
+                  onClick={() => {
+                    setHousehold(h);
+                    if (h === "partner" || h === "solo" || h === "share" || h === "family") {
+                      setChildrenCount(0);
+                    }
+                  }}
+                  className={`px-3 py-2 rounded-full border text-sm ${household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}
+                >
                   {h === "solo" ? "Solo" : h === "partner" ? "Partner" : h === "partnerKids" ? "Partner + kids" : h === "singleParent" ? "Single parent" : h === "share" ? "House share" : "Back home"}
                 </button>
               ))}
@@ -659,20 +750,27 @@ export default function Page() {
                 <div>
                   <label className="text-sm">Children</label>
                   <div className="flex gap-2 mt-2">
-                    {[0, 1, 2, 3].map(n => (
-                      <button key={n} onClick={() => setChildrenCount(n)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>{n}{n === 3 ? "+" : ""}</button>
+                    {[0, 1, 2, 3].map((n) => (
+                      <button key={n} onClick={() => setChildrenCount(n)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                        {n}
+                        {n === 3 ? "+" : ""}
+                      </button>
                     ))}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm">Age band</label>
                   <div className="flex gap-2 mt-2">
-                    {(["nursery", "school"] as ChildAge[]).map(a => (
-                      <button key={a} onClick={() => setChildrenAge(a)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenAge === a ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>{a === "nursery" ? "Nursery/Pre-K" : "School age"}</button>
+                    {(["nursery", "school"] as ChildAge[]).map((a) => (
+                      <button key={a} onClick={() => setChildrenAge(a)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenAge === a ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                        {a === "nursery" ? "Nursery/Pre-K" : "School age"}
+                      </button>
                     ))}
                   </div>
                 </div>
-                <div className="text-xs text-zinc-600 col-span-2">Estimated children-related monthly costs: <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} /></div>
+                <div className="text-xs text-zinc-600 col-span-2">
+                  Estimated children-related monthly costs: <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} />
+                </div>
               </div>
             )}
           </div>
@@ -680,26 +778,32 @@ export default function Page() {
           <div>
             <label className="text-sm">Debt repayments</label>
             <input type="range" min={0} max={2000} step={10} value={debtMonthly} onChange={(e) => setDebtMonthly(Number(e.target.value))} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1"><Money value={debtMonthly} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              <Money value={debtMonthly} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Student loan</label>
             <input type="range" min={0} max={300} step={5} value={studentLoan} onChange={(e) => setStudentLoan(Number(e.target.value))} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1"><Money value={studentLoan} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              <Money value={studentLoan} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Savings / pension rate</label>
             <input type="range" min={0} max={20} step={1} value={savingsRate} onChange={(e) => setSavingsRate(Number(e.target.value))} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">{savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              {savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month
+            </div>
           </div>
 
           {region === "US" && (
             <div>
               <label className="text-sm">Healthcare (US)</label>
               <div className="flex gap-2 flex-wrap mt-2">
-                {(["employer", "market", "none"] as HealthPlanUS[]).map(p => (
+                {(["employer", "market", "none"] as HealthPlanUS[]).map((p) => (
                   <button key={p} onClick={() => setUsHealthPlan(p)} className={`px-3 py-2 rounded-full border text-sm ${usHealthPlan === p ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
                     {p === "employer" ? "Employer plan" : p === "market" ? "Marketplace" : "Uninsured"}
                   </button>
@@ -722,10 +826,20 @@ export default function Page() {
             const titleClr = `text-${meta.color}-800`;
             return (
               <div key={key} className={`border rounded-2xl p-4 shadow-sm ${border} ${bg}`}>
-                <div className={`text-sm font-medium flex items-center gap-2 ${titleClr}`}><span className="text-lg" aria-hidden>{meta.emoji}</span>{meta.title}</div>
+                <div className={`text-sm font-medium flex items-center gap-2 ${titleClr}`}>
+                  <span className="text-lg" aria-hidden>
+                    {meta.emoji}
+                  </span>
+                  {meta.title}
+                </div>
                 <div className="text-xs text-zinc-600 mb-3">{meta.sub}</div>
                 <input type="range" min={lim.min} max={lim.max} step={lim.step} value={drivers[key]} onChange={(e) => setDrivers((d) => ({ ...d, [key]: Number(e.target.value) }))} className="w-full" />
-                <div className="text-xs text-zinc-500 mt-1">Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}{DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}{lim.min}–{currency}{lim.max}</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}
+                  {DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}
+                  {lim.min}–{currency}
+                  {lim.max}
+                </div>
               </div>
             );
           })}
@@ -737,7 +851,11 @@ export default function Page() {
               <div key={k} className="border rounded-2xl p-4">
                 <div className="text-sm font-medium mb-2">{lim.label}</div>
                 <input type="range" min={lim.min} max={lim.max} step={lim.step} value={spends[k]} onChange={(e) => setSpends((s) => ({ ...s, [k]: Number(e.target.value) }))} className="w-full" />
-                <div className="text-xs text-zinc-500 mt-1">Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}{lim.min}–{currency}{lim.max})</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}
+                  {lim.min}–{currency}
+                  {lim.max})
+                </div>
                 {k === "pet" && <div className="text-[11px] text-zinc-500">Exclude fashion/grooming; include vet, insurance, daycare/boarding, horses.</div>}
                 {k === "health" && <div className="text-[11px] text-zinc-500">Exclude insurance premiums; include meds, dental, vision, therapy not covered.</div>}
               </div>
@@ -747,9 +865,13 @@ export default function Page() {
 
         {/* Bottom nav */}
         <div className="flex flex-wrap justify-between items-center gap-2 mt-6">
-          <button onClick={back} className="px-3 py-2 rounded-lg border">Back</button>
+          <button onClick={back} className="px-3 py-2 rounded-lg border">
+            Back
+          </button>
           <div className="flex gap-2">
-            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
+            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">
+              Continue
+            </button>
           </div>
         </div>
       </CardBody>
@@ -759,7 +881,9 @@ export default function Page() {
   const RevealSection = () => (
     <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
-        <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden"><div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} /></div>
+        <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
+          <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-4">
           <div>
             <div className="flex items-center gap-2 text-xs text-zinc-600">
@@ -782,7 +906,7 @@ export default function Page() {
                 emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
               }`}
             >
-              {emailSaved ? (abVariant === "A" ? "Email saved" : "Saved") : (abVariant === "A" ? "Email me the 1-page plan" : "Unlock my plan")}
+              {emailSaved ? (abVariant === "A" ? "Email saved" : "Saved") : abVariant === "A" ? "Email me the 1-page plan" : "Unlock my plan"}
             </button>
           </div>
         </div>
@@ -794,11 +918,20 @@ export default function Page() {
             <div className="relative">
               <div ref={shareRef} className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}>
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
-                <div className="text-3xl font-bold mt-1">{currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h</div>
-                <div className="text-lg mt-1">That's {currency}{baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.</div>
+                <div className="text-3xl font-bold mt-1">
+                  {currency}
+                  {Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
+                </div>
+                <div className="text-lg mt-1">
+                  That's {currency}
+                  {baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.
+                </div>
                 <div className="text-[11px] text-zinc-500 mt-1 italic">*Calculated as net discretionary pay per actual hour of life traded.</div>
                 {netMonthly > 0 && (
-                  <div className="text-3xl font-bold mt-1">Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.</div>
+                  <div className="text-3xl font-bold mt-1">
+                    Out of every {currency}1 you earn, {currency}
+                    {(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.
+                  </div>
                 )}
 
                 <div className="mt-4">
@@ -827,7 +960,9 @@ export default function Page() {
                     <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
                     <div className="flex flex-col sm:flex-row gap-2 mt-3">
                       <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
-                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
+                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">
+                        Unlock
+                      </button>
                     </div>
                     <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
                   </div>
@@ -844,54 +979,120 @@ export default function Page() {
           </div>
 
           <div className="space-y-5">
-            <Card><CardBody>
-              <div className="text-sm font-medium">Life Efficiency Score</div>
-              <div className="flex items-end justify-between mt-1"><div className="text-3xl font-semibold">{efficiencyScore}/100</div></div>
-              <div className="mt-2 h-2 w-full rounded bg-zinc-200 overflow-hidden"><div className="h-2 bg-emerald-500" style={{ width: `${efficiencyScore}%` }} /></div>
-              <div className="text-[11px] text-zinc-500 mt-2">Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.</div>
-            </CardBody></Card>
-
-            <Card><CardBody>
-              <div className="text-sm font-medium">Challenge mode</div>
-              <div className="mt-2 space-y-3 text-sm">
-                <div><div className="flex justify-between"><span>Remote days / week</span><span>{simRemoteDays}</span></div>
-                  <input type="range" min={0} max={5} step={1} value={simRemoteDays} onChange={(e) => setSimRemoteDays(Number(e.target.value))} className="w-full" />
+            <Card>
+              <CardBody>
+                <div className="text-sm font-medium">Life Efficiency Score</div>
+                <div className="flex items-end justify-between mt-1">
+                  <div className="text-3xl font-semibold">{efficiencyScore}/100</div>
                 </div>
-                <div><div className="flex justify-between"><span>Rent change (monthly)</span><span>{currency}{simRentDelta}</span></div>
-                  <input type="range" min={-600} max={600} step={50} value={simRentDelta} onChange={(e) => setSimRentDelta(Number(e.target.value))} className="w-full" />
+                <div className="mt-2 h-2 w-full rounded bg-zinc-200 overflow-hidden">
+                  <div className="h-2 bg-emerald-500" style={{ width: `${efficiencyScore}%` }} />
                 </div>
-                <div><div className="flex justify-between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
-                  <input type="range" min={-500} max={1500} step={50} value={simIncomeDelta} onChange={(e) => setSimIncomeDelta(Number(e.target.value))} className="w-full" />
+                <div className="text-[11px] text-zinc-500 mt-2">Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.</div>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardBody>
+                <div className="text-sm font-medium">Challenge mode</div>
+                <div className="mt-2 space-y-3 text-sm">
+                  <div>
+                    <div className="flex justify-between">
+                      <span>Remote days / week</span>
+                      <span>{simRemoteDays}</span>
+                    </div>
+                    <input type="range" min={0} max={5} step={1} value={simRemoteDays} onChange={(e) => setSimRemoteDays(Number(e.target.value))} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between">
+                      <span>Rent change (monthly)</span>
+                      <span>
+                        {currency}
+                        {simRentDelta}
+                      </span>
+                    </div>
+                    <input type="range" min={-600} max={600} step={50} value={simRentDelta} onChange={(e) => setSimRentDelta(Number(e.target.value))} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between">
+                      <span>Income change (monthly)</span>
+                      <span>
+                        {currency}
+                        {simIncomeDelta}
+                      </span>
+                    </div>
+                    <input type="range" min={-500} max={1500} step={50} value={simIncomeDelta} onChange={(e) => setSimIncomeDelta(Number(e.target.value))} className="w-full" />
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3 text-xs text-zinc-500">Simulated: <span className="font-semibold">{currency}{Math.max(0, simLeftover).toLocaleString()}</span> ({currency}{simFreedom.toFixed(2)}/hr)</div>
-              <div className="text-xs text-zinc-500">Δ vs your baseline: {currency}{(simLeftover - baselineLeftover).toLocaleString()}</div>
-              {!emailSaved && <div className="text-[11px] text-zinc-500 mt-2">Email your optimised plan & settings.</div>}
-            </CardBody></Card>
+                <div className="mt-3 text-xs text-zinc-500">
+                  Simulated: <span className="font-semibold">{currency}{Math.max(0, simLeftover).toLocaleString()}</span> ({currency}{simFreedom.toFixed(2)}/hr)
+                </div>
+                <div className="text-xs text-zinc-500">Δ vs your baseline: {currency}{(simLeftover - baselineLeftover).toLocaleString()}</div>
+                {!emailSaved && <div className="text-[11px] text-zinc-500 mt-2">Email your optimised plan & settings.</div>}
+              </CardBody>
+            </Card>
 
-            <Card><CardBody>
-              <div className="text-sm">Your chosen month (with your commute & drivers)</div>
-              <div className="text-2xl font-semibold mt-1">Kept: <Money value={leftover} currency={currency} /> ({currency}{effectivePerHour.toFixed(2)}/hr)</div>
-              <div className="text-xs text-zinc-500 mt-2">Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% • Kids: <Money value={dependentsMonthly} currency={currency} /></div>
-            </CardBody></Card>
+            <Card>
+              <CardBody>
+                <div className="text-sm">Your chosen month (with your commute & drivers)</div>
+                <div className="text-2xl font-semibold mt-1">
+                  Kept: <Money value={leftover} currency={currency} /> ({currency}
+                  {effectivePerHour.toFixed(2)}/hr)
+                </div>
+                <div className="text-xs text-zinc-500 mt-2">
+                  Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
+                  Kids: <Money value={dependentsMonthly} currency={currency} />
+                </div>
+              </CardBody>
+            </Card>
 
-            <Card><CardBody>
-              <div className="text-sm">Commute estimate</div>
-              <div className="text-2xl font-semibold mt-1"><Money value={commuteMonthly} currency={currency} /> / month</div>
-              <div className="text-xs text-zinc-500 mt-2">Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.</div>
-            </CardBody></Card>
+            <Card>
+              <CardBody>
+                <div className="text-sm">Commute estimate</div>
+                <div className="text-2xl font-semibold mt-1">
+                  <Money value={commuteMonthly} currency={currency} /> / month
+                </div>
+                <div className="text-xs text-zinc-500 mt-2">
+                  Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.
+                </div>
+              </CardBody>
+            </Card>
 
-            <Card><CardBody>
-              <div className="text-sm">Maintenance totals</div>
-              <div className="text-xs text-zinc-500 mt-1">Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} /></div>
-            </CardBody></Card>
+            <Card>
+              <CardBody>
+                <div className="text-sm">Maintenance totals</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} />
+                </div>
+              </CardBody>
+            </Card>
 
-            {healthcareMonthly > 0 && (<Card><CardBody><div className="text-sm">Healthcare gap</div><div className="text-2xl font-semibold mt-1"><Money value={healthcareMonthly} currency={currency} /> / month</div></CardBody></Card>)}
+            {healthcareMonthly > 0 && (
+              <Card>
+                <CardBody>
+                  <div className="text-sm">Healthcare gap</div>
+                  <div className="text-2xl font-semibold mt-1">
+                    <Money value={healthcareMonthly} currency={currency} /> / month
+                  </div>
+                </CardBody>
+              </Card>
+            )}
 
-            {(savingsMonthly > 0 || savingsRate > 0) && (<Card><CardBody><div className="text-sm">Savings / pension</div><div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)</div></CardBody></Card>)}
+            {(savingsMonthly > 0 || savingsRate > 0) && (
+              <Card>
+                <CardBody>
+                  <div className="text-sm">Savings / pension</div>
+                  <div className="text-2xl font-semibold mt-1">
+                    <Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)
+                  </div>
+                </CardBody>
+              </Card>
+            )}
 
             <div className="flex gap-2">
-              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
+              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">
+                Create share image
+              </button>
             </div>
           </div>
         </div>
