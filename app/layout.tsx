@@ -12,99 +12,75 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* ---- HARDEN FOCUS (runs before any third-party script) ---- */}
+        {/* ---- Run BEFORE any third-party scripts: block focus thieves ---- */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
 (function(){
-  // 1) Block focus() on known CMP/ads iframes
-  const ifrCanGrab = (el) => {
-    if (!el) return false;
-    const n = (el.getAttribute('name')||'').toLowerCase();
-    const s = (el.getAttribute('src')||'').toLowerCase();
-    return n==='googlefcpresent' || s.includes('fundingchoices') || s.includes('google.com');
+  // Helpers
+  const isBadIframe = (el) => {
+    try {
+      if (!el) return false;
+      const n = (el.getAttribute('name')||'').toLowerCase();
+      const s = (el.getAttribute('src')||'').toLowerCase();
+      // Tweak list if you add more vendors
+      return n==='googlefcpresent' || s.includes('fundingchoices') || s.includes('googlesyndication') || s.includes('google.com');
+    } catch { return false; }
   };
+
+  // 1) Patch iframe.focus to ignore bad iframes
   const origFocus = HTMLIFrameElement.prototype.focus;
   HTMLIFrameElement.prototype.focus = function(...args){
-    try { if (ifrCanGrab(this)) return; } catch {}
+    if (isBadIframe(this)) return;
     return origFocus.apply(this, args);
   };
 
-  // 2) Immediately neuter iframes when added
-  const tame = (root=document) => {
-    const q = 'iframe[name="googlefcPresent"],iframe[src*="fundingchoices"]';
-    root.querySelectorAll?.(q).forEach((f)=>{
+  // 2) Whenever DOM changes, neuter new bad iframes immediately
+  const tameRoot = (root=document) => {
+    root.querySelectorAll?.('iframe').forEach((f)=>{
+      if (!isBadIframe(f)) return;
       try{
         f.tabIndex = -1;
         f.setAttribute('aria-hidden','true');
         const st = f.style;
-        st.pointerEvents='none'; st.opacity='0'; st.width='0'; st.height='0'; st.position='absolute';
+        st.pointerEvents='none';
+        st.opacity='0';
+        st.width='0';
+        st.height='0';
+        st.position='absolute';
+        st.left='-99999px';
+        st.top='-99999px';
       }catch{}
     });
   };
-  tame(document);
+  tameRoot(document);
   const mo = new MutationObserver(muts => muts.forEach(m=>{
     m.addedNodes.forEach(n=>{
-      if (n instanceof HTMLElement || n instanceof DocumentFragment) tame(n as any);
+      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n as any);
     });
   }));
   mo.observe(document.documentElement,{childList:true,subtree:true});
 
-  // 3) If a hostile iframe somehow becomes active, blur it instantly
-  window.addEventListener('focusin', (e)=>{
-    const t = e.target;
-    try{
-      if (t instanceof HTMLIFrameElement && ifrCanGrab(t)) {
-        t.blur?.();
-      }
-    }catch{}
-  }, true);
+  // 3) Block focus events bubbling from those iframes (belt & braces)
+  const kill = (e)=>{ const t=e.target; if (t instanceof HTMLIFrameElement && isBadIframe(t)) { try{t.blur?.()}catch{} e.stopImmediatePropagation(); e.preventDefault(); } };
+  window.addEventListener('focusin', kill, true);
+  window.addEventListener('pointerdown', kill, true);
+  window.addEventListener('mousedown', kill, true);
+  window.addEventListener('touchstart', kill, true);
 })();
             `,
           }}
         />
 
-        {/* Google AdSense */}
+        {/* Google AdSense (ok to keep) */}
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
           crossOrigin="anonymous"
         ></script>
 
-        {/* Google Funding Choices CMP (Consent Mode v2) */}
+        {/* Google Funding Choices loader (kept), but we REMOVE their helper that injects googlefcPresent */}
         <script async src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"></script>
-
-        {/* Their helper that injects googlefcPresent */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                function signalGooglefcPresent() {
-                  if (!window.frames['googlefcPresent']) {
-                    if (document.body) {
-                      const iframe = document.createElement('iframe');
-                      iframe.style.cssText = 'display:none';
-                      iframe.name = 'googlefcPresent';
-                      // neuter immediately
-                      iframe.tabIndex = -1;
-                      iframe.setAttribute('aria-hidden','true');
-                      try {
-                        iframe.style.pointerEvents='none';
-                        iframe.style.opacity='0';
-                        iframe.style.width='0';
-                        iframe.style.height='0';
-                      } catch {}
-                      document.body.appendChild(iframe);
-                    } else {
-                      setTimeout(signalGooglefcPresent, 0);
-                    }
-                  }
-                }
-                signalGooglefcPresent();
-              })();
-            `,
-          }}
-        />
       </head>
 
       <body className="min-h-screen flex flex-col">
