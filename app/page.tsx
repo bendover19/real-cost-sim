@@ -845,10 +845,21 @@ export default function Page() {
                 <div className="text-3xl font-bold mt-1">
                   {currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
-                <div className="text-lg mt-1">
-                  That's {currency}{baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1 italic">*Calculated as net discretionary pay per actual hour of life traded.</div>
+                {/* Plain-English hourly line (baseline) */}
+{baselineFreedom >= 0 ? (
+  <div className="text-lg mt-1">
+    After every hour you spend working (including commuting), you truly keep about{" "}
+    <strong>{currency}{baselineFreedom.toFixed(2)}</strong> of disposable money.
+  </div>
+) : (
+  <div className="text-lg mt-1 text-rose-300">
+    You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+  </div>
+)}
+<div className="text-[11px] text-zinc-500 mt-1 italic">
+  Calculated from your net discretionary pay ÷ actual hours (incl. commute).
+</div>
+
                 {netMonthly > 0 && (
                   <div className="text-3xl font-bold mt-1">
                     Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.
@@ -978,8 +989,21 @@ export default function Page() {
               <CardBody>
                 <div className="text-sm">Your chosen month (with your commute & drivers)</div>
                 <div className="text-2xl font-semibold mt-1">
-                  Kept: <Money value={leftover} currency={currency} /> ({currency}{effectivePerHour.toFixed(2)}/hr)
-                </div>
+  Kept: <Money value={leftover} currency={currency} />
+</div>
+<div className="text-sm mt-1">
+  {effectivePerHour >= 0 ? (
+    <>
+      After every hour you spend working (including commuting), you truly keep about{" "}
+      <strong>{currency}{effectivePerHour.toFixed(2)}</strong> of disposable money.
+    </>
+  ) : (
+    <span className="text-rose-700">
+      You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+    </span>
+  )}
+</div>
+
                 <div className="text-xs text-zinc-500 mt-2">
                   Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
                   Kids: <Money value={dependentsMonthly} currency={currency} />
