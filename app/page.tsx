@@ -15,6 +15,63 @@ import html2canvas from "html2canvas";
 
 const INGEST_PATH = "/api/ingest";
 
+/** ----------------------------------------------------------------
+ * Smooth, mobile-friendly range input
+ * Updates local state while dragging; commits on release (or throttled live)
+ * ---------------------------------------------------------------- */
+const InputRange: React.FC<
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "onInput"> & {
+    value: number;
+    onValue: (n: number) => void;
+    live?: boolean;
+    throttleMs?: number;
+  }
+> = ({ value, onValue, live = false, throttleMs = 60, ...rest }) => {
+  const [inner, setInner] = React.useState<number>(value ?? 0);
+  const tRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    setInner(value ?? 0);
+  }, [value]);
+
+  const commit = React.useCallback(
+    (n: number) => {
+      onValue(n);
+    },
+    [onValue]
+  );
+
+  const onInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const n = Number((e.currentTarget as HTMLInputElement).value);
+    setInner(n);
+    if (live) {
+      if (tRef.current) window.clearTimeout(tRef.current);
+      tRef.current = window.setTimeout(() => {
+        commit(n);
+        tRef.current = null;
+      }, throttleMs);
+    }
+  };
+
+  const onPointerUp = () => {
+    if (!live) commit(inner);
+  };
+
+  return (
+    <input
+      type="range"
+      {...rest}
+      value={inner}
+      onInput={onInput}
+      onChange={() => {}}
+      onPointerUp={onPointerUp}
+      onMouseUp={onPointerUp}
+      onTouchEnd={onPointerUp}
+      style={{ touchAction: "pan-y" }}
+    />
+  );
+};
+
 // ---------- Types ----------
 type RegionId = "UK" | "EU" | "US" | "OTHER";
 type Household = "solo" | "partner" | "partnerKids" | "singleParent" | "share" | "family";
@@ -692,7 +749,7 @@ export default function Page() {
 
           <div>
             <label className="text-sm">Hours you work each week, including commute</label>
-            <input type="range" min={30} max={80} step={1} value={hoursWeek} onChange={(e) => setHoursWeek(Number(e.target.value))} className="w-full mt-3" />
+            <InputRange min={30} max={80} step={1} value={hoursWeek} onValue={setHoursWeek} className="w-full mt-3" />
             <div className="text-xs text-zinc-500 mt-1">
               {hoursWeek} hours / week → ~{hoursPerMonth} per month
             </div>
@@ -718,7 +775,7 @@ export default function Page() {
             {transportMode === "remote" && (
               <div className="mt-2">
                 <label className="text-sm">WFH utilities uplift</label>
-                <input type="range" min={0} max={80} step={5} value={wfhUtilities} onChange={(e) => setWfhUtilities(Number(e.target.value))} className="w-full" />
+                <InputRange min={0} max={80} step={5} value={wfhUtilities} onValue={setWfhUtilities} className="w-full" />
                 <div className="text-[11px] text-zinc-500">Covers heating/electric/internet share.</div>
               </div>
             )}
@@ -777,7 +834,7 @@ export default function Page() {
 
           <div>
             <label className="text-sm">Debt repayments</label>
-            <input type="range" min={0} max={2000} step={10} value={debtMonthly} onChange={(e) => setDebtMonthly(Number(e.target.value))} className="w-full mt-3" />
+            <InputRange min={0} max={2000} step={10} value={debtMonthly} onValue={setDebtMonthly} className="w-full mt-3" />
             <div className="text-xs text-zinc-500 mt-1">
               <Money value={debtMonthly} currency={currency} /> / month
             </div>
@@ -785,7 +842,7 @@ export default function Page() {
 
           <div>
             <label className="text-sm">Student loan</label>
-            <input type="range" min={0} max={300} step={5} value={studentLoan} onChange={(e) => setStudentLoan(Number(e.target.value))} className="w-full mt-3" />
+            <InputRange min={0} max={300} step={5} value={studentLoan} onValue={setStudentLoan} className="w-full mt-3" />
             <div className="text-xs text-zinc-500 mt-1">
               <Money value={studentLoan} currency={currency} /> / month
             </div>
@@ -793,7 +850,7 @@ export default function Page() {
 
           <div>
             <label className="text-sm">Savings / pension rate</label>
-            <input type="range" min={0} max={20} step={1} value={savingsRate} onChange={(e) => setSavingsRate(Number(e.target.value))} className="w-full mt-3" />
+            <InputRange min={0} max={20} step={1} value={savingsRate} onValue={setSavingsRate} className="w-full mt-3" />
             <div className="text-xs text-zinc-500 mt-1">
               {savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month
             </div>
@@ -811,7 +868,7 @@ export default function Page() {
               </div>
               <div className="mt-2">
                 <label className="text-sm">Override / out-of-pocket</label>
-                <input type="range" min={0} max={2000} step={10} value={usHealthcareOverride} onChange={(e) => setUsHealthcareOverride(Number(e.target.value))} className="w-full" />
+                <InputRange min={0} max={2000} step={10} value={usHealthcareOverride} onValue={setUsHealthcareOverride} className="w-full" />
                 <div className="text-[11px] text-zinc-500">If 0, we use a typical value for your plan.</div>
               </div>
             </div>
@@ -833,7 +890,14 @@ export default function Page() {
                   {meta.title}
                 </div>
                 <div className="text-xs text-zinc-600 mb-3">{meta.sub}</div>
-                <input type="range" min={lim.min} max={lim.max} step={lim.step} value={drivers[key]} onChange={(e) => setDrivers((d) => ({ ...d, [key]: Number(e.target.value) }))} className="w-full" />
+                <InputRange
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={drivers[key]}
+                  onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))}
+                  className="w-full"
+                />
                 <div className="text-xs text-zinc-500 mt-1">
                   Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}
                   {DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}
@@ -850,7 +914,14 @@ export default function Page() {
             return (
               <div key={k} className="border rounded-2xl p-4">
                 <div className="text-sm font-medium mb-2">{lim.label}</div>
-                <input type="range" min={lim.min} max={lim.max} step={lim.step} value={spends[k]} onChange={(e) => setSpends((s) => ({ ...s, [k]: Number(e.target.value) }))} className="w-full" />
+                <InputRange
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={spends[k]}
+                  onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))}
+                  className="w-full"
+                />
                 <div className="text-xs text-zinc-500 mt-1">
                   Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}
                   {lim.min}–{currency}
@@ -1001,7 +1072,7 @@ export default function Page() {
                       <span>Remote days / week</span>
                       <span>{simRemoteDays}</span>
                     </div>
-                    <input type="range" min={0} max={5} step={1} value={simRemoteDays} onChange={(e) => setSimRemoteDays(Number(e.target.value))} className="w-full" />
+                    <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
                   </div>
                   <div>
                     <div className="flex justify-between">
@@ -1011,7 +1082,7 @@ export default function Page() {
                         {simRentDelta}
                       </span>
                     </div>
-                    <input type="range" min={-600} max={600} step={50} value={simRentDelta} onChange={(e) => setSimRentDelta(Number(e.target.value))} className="w-full" />
+                    <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
                   </div>
                   <div>
                     <div className="flex justify-between">
@@ -1021,7 +1092,7 @@ export default function Page() {
                         {simIncomeDelta}
                       </span>
                     </div>
-                    <input type="range" min={-500} max={1500} step={50} value={simIncomeDelta} onChange={(e) => setSimIncomeDelta(Number(e.target.value))} className="w-full" />
+                    <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
                   </div>
                 </div>
                 <div className="mt-3 text-xs text-zinc-500">
