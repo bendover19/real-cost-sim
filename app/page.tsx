@@ -523,6 +523,8 @@ export default function Page() {
             <div>
               <label className="text-sm">City name (optional)</label>
               <StickyTextInput
+                id="city-input"
+                data-probe="city"
                 defaultValue={cityName}
                 onValue={setCityName}
                 className="w-full mt-2 rounded-lg border p-2 bg-white"
@@ -592,6 +594,8 @@ export default function Page() {
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
               <StickyNumericInput
+                id="income-input"
+                data-probe="income"
                 defaultValue={takeHomeStr}
                 onValue={(t) => setTakeHomeStr(t)}
                 className="w-full rounded-lg border p-2 bg-white"
@@ -608,6 +612,8 @@ export default function Page() {
               <span className="text-zinc-500">{currency}</span>
               <StickyNumericInput
                 defaultValue={housingStr}
+                id="housing-input"
+                data-probe="housing"
                 onValue={(t) => { setHousingTouched(true); setHousingStr(t); }}
                 className="w-full rounded-lg border p-2 bg-white"
                 aria-label="Monthly housing"
