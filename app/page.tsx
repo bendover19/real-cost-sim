@@ -1,23 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 
 /**
  * Real Cost Simulator — page.tsx (stable session + single-submit)
- * - No Supabase client imports; server writes happen via /api/ingest
- * - Session id stored in cookie + localStorage (no WebCrypto)
- * - Manual post (and optional auto-post on step >= 1)
- * - Mutex prevents overlapping posts (StrictMode-safe)
- * - Percentiles/benchmarks removed
+ * This version makes Income + Housing inputs UNCONTROLLED (with refs)
+ * to fully eliminate focus loss while typing.
  */
 
 const INGEST_PATH = "/api/ingest";
 
 /** ----------------------------------------------------------------
- * Smooth, mobile-friendly range input
- * Updates local state while dragging; commits on release (or throttled live)
+ * Smooth, mobile-friendly range input (UNCHANGED)
  * ---------------------------------------------------------------- */
 const InputRange: React.FC<
   Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "onInput"> & {
@@ -34,12 +30,7 @@ const InputRange: React.FC<
     setInner(value ?? 0);
   }, [value]);
 
-  const commit = React.useCallback(
-    (n: number) => {
-      onValue(n);
-    },
-    [onValue]
-  );
+  const commit = React.useCallback((n: number) => onValue(n), [onValue]);
 
   const onInput = (e: React.FormEvent<HTMLInputElement>) => {
     const n = Number((e.currentTarget as HTMLInputElement).value);
@@ -192,7 +183,7 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
   return Math.round((netMonthly * Math.max(0, Math.min(20, ratePct))) / 100);
 }
 
-// NEW helper: parse numeric text safely without breaking typing
+// Parse numeric text safely without breaking typing
 function toNumberSafe(v: string): number {
   if (v.trim() === "" || v === "-") return 0;
   const n = Number(v.replace(/[, ]/g, ""));
@@ -370,9 +361,11 @@ export default function Page() {
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
 
-  // STRING-FIRST: keep what the user types
+  // We keep user-typed text in state (for math) BUT inputs are UNCONTROLLED.
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
+  const incomeRef = useRef<HTMLInputElement>(null);
+  const housingRef = useRef<HTMLInputElement>(null);
 
   // Derived numeric values used everywhere else
   const takeHome = useMemo(() => toNumberSafe(takeHomeStr), [takeHomeStr]);
@@ -425,11 +418,12 @@ export default function Page() {
     return Math.max(0, base);
   }, [isGross, takeHome, region]);
 
-  // When region/household/urbanicity change, update housing (only if user hasn't touched it)
+  // Keep housing suggestion only if user hasn't changed it (update the DOM input via ref)
   useEffect(() => {
     if (!housingTouched) {
       const v = Math.round(suggestedHousing(region, household) * rentMul);
       setHousingStr(String(v));
+      if (housingRef.current) housingRef.current.value = String(v);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region, household, urbanicity]);
@@ -479,25 +473,11 @@ export default function Page() {
   }, [baselineLeftover, hoursPerMonth]);
 
   // --- Challenge-mode derived values ---
-  const simCommute = useMemo(
-    () => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))),
-    [baselineCommute, simRemoteDays]
-  );
+  const simCommute = useMemo(() => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))), [baselineCommute, simRemoteDays]);
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
   const simLeftover = useMemo(
-    () =>
-      Math.round(
-        simNet -
-          simHousing -
-          simCommute -
-          maintenanceSum -
-          dependentsMonthly -
-          healthcareMonthly -
-          debtMonthly -
-          studentLoan -
-          savingsMonthly
-      ),
+    () => Math.round(simNet - simHousing - simCommute - maintenanceSum - dependentsMonthly - healthcareMonthly - debtMonthly - studentLoan - savingsMonthly),
     [simNet, simHousing, simCommute, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
   const simFreedom = useMemo(() => {
@@ -523,11 +503,11 @@ export default function Page() {
   const next = () => setStep((s) => Math.min(2, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
 
-  async function makeShareCard() {
+  const makeShareCard = useCallback(async () => {
     if (!shareRef.current) return;
     const canvas = await html2canvas(shareRef.current, { backgroundColor: "#0a0a0a", scale: 2 });
     setImageUrl(canvas.toDataURL("image/png"));
-  }
+  }, []);
 
   // --------- Submit logic ----------
   function buildPayload() {
@@ -617,26 +597,17 @@ export default function Page() {
 
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
 
-        {/* Descriptive intro (for reviewers/SEO) */}
         <div className="mt-6 text-zinc-700 space-y-3 leading-relaxed">
           <p>Most people never see how much of their paycheck quietly disappears into rent, transport, debt, and time spent commuting. Your payslip ≠ your pay.</p>
           <p>
-            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount of income you actually keep after all the hidden costs of
-            working life. It’s designed to help you make smarter choices about where you live, how you work, and what really pays off.
+            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount of income you actually keep after all the hidden costs of working life.
           </p>
-          <p>
-            In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate into more free time and financial breathing room. It’s a
-            transparent view of what your work is truly worth.
-          </p>
+          <p>In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate into more free time and financial breathing room.</p>
         </div>
 
-        {/* Existing intro + form */}
         <div className="space-y-6 mt-6">
           <p className="text-zinc-700">
             See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of staying employable.
-          </p>
-          <p className="text-zinc-700 font-medium">
-            In <span className="font-bold text-lg text-zinc-900">one minute</span> you’ll get the truth, then what to change.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -716,12 +687,21 @@ export default function Page() {
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
+              {/* UNCONTROLLED input + ref; keep state in sync onInput */}
               <input
+                ref={incomeRef}
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={takeHomeStr}
-                onChange={(e) => setTakeHomeStr(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                defaultValue={takeHomeStr}
+                onInput={(e) => setTakeHomeStr((e.target as HTMLInputElement).value)}
+                onBlur={() => {
+                  const norm = String(toNumberSafe(incomeRef.current?.value ?? ""));
+                  if (incomeRef.current) incomeRef.current.value = norm;
+                  setTakeHomeStr(norm);
+                }}
                 className="w-full rounded-lg border p-2 bg-white"
               />
             </div>
@@ -733,14 +713,23 @@ export default function Page() {
             <label className="text-sm">Your rent or mortgage each month (your share)</label>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-zinc-500">{currency}</span>
+              {/* UNCONTROLLED input + ref; keep state in sync onInput */}
               <input
+                ref={housingRef}
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={housingStr}
-                onChange={(e) => {
+                autoComplete="off"
+                spellCheck={false}
+                defaultValue={housingStr}
+                onInput={(e) => {
                   setHousingTouched(true);
-                  setHousingStr(e.target.value);
+                  setHousingStr((e.target as HTMLInputElement).value);
+                }}
+                onBlur={() => {
+                  const norm = String(toNumberSafe(housingRef.current?.value ?? ""));
+                  if (housingRef.current) housingRef.current.value = norm;
+                  setHousingStr(norm);
                 }}
                 className="w-full rounded-lg border p-2 bg-white"
               />
@@ -753,6 +742,7 @@ export default function Page() {
                 className="underline"
                 onClick={() => {
                   const v = Math.round(suggestedHousing(region, household) * rentMul);
+                  if (housingRef.current) housingRef.current.value = String(v);
                   setHousingStr(String(v));
                   setHousingTouched(true);
                 }}
