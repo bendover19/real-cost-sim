@@ -642,7 +642,7 @@ export default function Page() {
             <div className="flex gap-2 flex-wrap mt-2">
               <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Public transport</button>
               <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Drive / taxi</button>
-              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
+              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded_full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
               <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Remote / no commute</button>
             </div>
             {transportMode === "remote" && (
@@ -890,7 +890,7 @@ export default function Page() {
                     <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
                   </div>
                   <div>
-                    <div className="flex justify-between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
+                    <div className="flex justify_between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
                     <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
                   </div>
                 </div>
@@ -972,20 +972,20 @@ export default function Page() {
   );
 }
 
-/* ---------- Session helpers ---------- */
+/* ---------- Session helpers (NO template literals) ---------- */
 let __sidCounter = 0;
 function simpleId() {
   return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
 }
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
-  const m = document.cookie.match(new RegExp(\`(?:^|; )\${name}=([^;]*)\`));
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
   return m ? decodeURIComponent(m[1]) : "";
 }
 function setCookie(name: string, value: string, days = 365) {
   if (typeof document === "undefined") return;
   const maxAge = days * 24 * 60 * 60;
-  document.cookie = \`\${name}=\${encodeURIComponent(value)}; path=/; max-age=\${maxAge}\`;
+  document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=" + String(maxAge);
 }
 function getOrCreateSessionId(): string {
   try {
@@ -994,7 +994,7 @@ function getOrCreateSessionId(): string {
     const existing = fromCookie || fromLS;
     if (existing) {
       if (!fromCookie) setCookie("rcs_sid", existing);
-      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rccs_session_id", existing);
+      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
       return existing;
     }
     const id = simpleId();
@@ -1026,7 +1026,7 @@ function StickyNumericInput(props: { defaultValue: string; onValue: (t: string) 
     if (v.trim() === "" || v === "-") return "0";
     const n = Number(v.replace(/[, ]/g, ""));
     return Number.isFinite(n) ? String(n) : "0";
-  };
+    };
   return (
     <input
       ref={ref}
