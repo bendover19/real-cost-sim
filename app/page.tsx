@@ -1,19 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
-
-/* ============================================================
-   Real Cost Simulator — page.tsx
-   - Sliders unchanged
-   - Text inputs are "sticky" (uncontrolled) so focus never jumps
-   - Sections render once and are hidden/shown (no remounts)
-   ============================================================ */
 
 const INGEST_PATH = "/api/ingest";
 
 /** ----------------------------------------------------------------
- * Smooth, mobile-friendly range input (UNCHANGED)
+ * Smooth, mobile-friendly range input (unchanged)
  * ---------------------------------------------------------------- */
 const InputRange: React.FC<
   Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "onInput"> & {
@@ -102,7 +96,6 @@ const COMMUTE_CTX: Record<CommuteContext, { label: string; commuteMul: number }>
   carDependent: { label: "Car-dependent city", commuteMul: 1.3 },
 };
 
-// Typical monthly amounts for driver categories (anchors for defaults)
 const DRIVER_TYPICAL: Record<DriverKey, number> = {
   belonging: 140,
   identity: 110,
@@ -113,7 +106,6 @@ const DRIVER_TYPICAL: Record<DriverKey, number> = {
   moneyPressure: 25,
 };
 
-// UI meta for drivers
 const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string; color: string }> = {
   belonging: { emoji: "🫶", title: "Belonging", sub: "Not being the ghost at work or with friends", color: "rose" },
   identity: { emoji: "👔", title: "Identity", sub: "Looking like you belong where you work", color: "violet" },
@@ -124,7 +116,6 @@ const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string
   moneyPressure: { emoji: "💸", title: "Money pressure", sub: "BNPL/overdraft to smooth the month", color: "orange" },
 };
 
-// Wide slider limits per driver
 const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number }> = {
   belonging: { min: 0, max: 800, step: 5 },
   identity: { min: 0, max: 800, step: 5 },
@@ -135,7 +126,6 @@ const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number 
   moneyPressure: { min: 0, max: 300, step: 5 },
 };
 
-// Slider limits for variable spends
 const SPEND_LIMITS: Record<SpendKey, { label: string; min: number; max: number; step: number }> = {
   pet: { label: "🐾 Pet costs (food, insurance, sitter/boarding, horse, etc.)", min: 0, max: 2000, step: 10 },
   therapy: { label: "🧠 Therapy / coaching / counselling", min: 0, max: 2000, step: 10 },
@@ -202,11 +192,52 @@ const Money: React.FC<{ value: number; currency: string }> = ({ value, currency 
   </span>
 );
 
+/* ---------- Friendly per-hour explainer (positive vs negative) ---------- */
+const HourlyPhrase: React.FC<{ value: number; currency: string; className?: string }> = ({
+  value,
+  currency,
+  className,
+}) => {
+  if (value >= 0) {
+    return (
+      <div className={className ?? "text-sm text-zinc-600 mt-1"}>
+        After every hour you spend working (including commuting), you truly keep about{" "}
+        <strong>
+          {currency}
+          {value.toFixed(2)}
+        </strong>{" "}
+        of disposable money.
+      </div>
+    );
+  }
+  return (
+    <div className={className ?? "text-sm text-rose-700 mt-1"}>
+      You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+    </div>
+  );
+};
+
 // ---------- Chart ----------
 function BarChart({
-  currency, net, housing, commute, maintenance, dependents, healthcare, debt, savings,
+  currency,
+  net,
+  housing,
+  commute,
+  maintenance,
+  dependents,
+  healthcare,
+  debt,
+  savings,
 }: {
-  currency: string; net: number; housing: number; commute: number; maintenance: number; dependents: number; healthcare: number; debt: number; savings: number;
+  currency: string;
+  net: number;
+  housing: number;
+  commute: number;
+  maintenance: number;
+  dependents: number;
+  healthcare: number;
+  debt: number;
+  savings: number;
 }) {
   const safeNet = Math.max(1, net);
   const slices = [
@@ -232,12 +263,14 @@ function BarChart({
         {slices.map((s) => (
           <div key={s.label} className="flex items-center gap-1">
             <span className={`inline-block w-3 h-3 rounded ${s.color}`} />
-            {s.label} {currency}{Math.max(0, s.value).toLocaleString()}
+            {s.label} {currency}
+            {Math.max(0, s.value).toLocaleString()}
           </div>
         ))}
         <div className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded bg-emerald-500" />
-          Leftover {currency}{Math.max(0, left).toLocaleString()}
+          Leftover {currency}
+          {Math.max(0, left).toLocaleString()}
         </div>
       </div>
       <div className="clear-both" />
@@ -259,7 +292,9 @@ export default function Page() {
   const isSavingRef = React.useRef(false);
   const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
 
-  useEffect(() => { setSessionId(getOrCreateSessionId()); }, []);
+  useEffect(() => {
+    setSessionId(getOrCreateSessionId());
+  }, []);
 
   // UTM / A/B cookie
   useEffect(() => {
@@ -268,10 +303,14 @@ export default function Page() {
       const utm = url.searchParams.get("utm_source") || url.searchParams.get("ref");
       if (utm) setLandSource(utm);
       const params = new URLSearchParams(url.search);
-      const qCity = params.get("city"); if (qCity) setCityName(qCity);
-      const qRegion = params.get("region") as RegionId | null; if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
-      const qUrban = params.get("urban") as Urbanicity | null; if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
-      const qCtx = params.get("ctx") as CommuteContext | null; if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
+      const qCity = params.get("city");
+      if (qCity) setCityName(qCity);
+      const qRegion = params.get("region") as RegionId | null;
+      if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
+      const qUrban = params.get("urban") as Urbanicity | null;
+      if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
+      const qCtx = params.get("ctx") as CommuteContext | null;
+      if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
     } catch {}
     try {
       const existing = document.cookie.match(/rcs_ab=([AB])/);
@@ -295,7 +334,7 @@ export default function Page() {
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
 
-  // “Feels uncontrolled” text inputs
+  // “Feels uncontrolled” text inputs (keep focus stable)
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
 
@@ -315,29 +354,25 @@ export default function Page() {
   const [debtMonthly, setDebtMonthly] = useState<number>(150);
   const [studentLoan, setStudentLoan] = useState<number>(0);
 
-  // Drivers & spends
   const [drivers, setDrivers] = useState<Record<DriverKey, number>>({ ...DRIVER_TYPICAL });
   const [spends, setSpends] = useState<Record<SpendKey, number>>({ pet: 0, therapy: 0, supportOthers: 0, health: 0 });
 
-  // Healthcare (US)
   const [usHealthPlan, setUsHealthPlan] = useState<HealthPlanUS | null>(null);
   const [usHealthcareOverride, setUsHealthcareOverride] = useState<number>(0);
 
-  // Savings
   const [savingsRate, setSavingsRate] = useState<number>(8);
 
-  // Email/share
   const [email, setEmail] = useState<string>("");
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = React.useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // --- Challenge mode (what-if sliders) ---
+  // Challenge mode
   const [simRemoteDays, setSimRemoteDays] = useState<number>(0);
   const [simRentDelta, setSimRentDelta] = useState<number>(0);
   const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0);
 
-  // Derived
+  // Derived calcs
   const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
   const urb = URBANICITY[urbanicity];
   const ctx = COMMUTE_CTX[commuteCtx];
@@ -388,7 +423,6 @@ export default function Page() {
   }, [leftover, hoursPerMonth]);
   const maintenancePct = useMemo(() => Math.max(0, Math.round((maintenanceSum / Math.max(1, netMonthly)) * 100)), [maintenanceSum, netMonthly]);
 
-  // Baseline (PT + Typical drivers)
   const baselineCommute = useMemo(() => Math.round(regionData.commutePT * commuteMul), [regionData, commuteMul]);
   const typicalDriversSum = useMemo(() => (Object.keys(DRIVER_TYPICAL) as DriverKey[]).reduce((s, k) => s + DRIVER_TYPICAL[k], 0), []);
   const baselineMaintenance = useMemo(() => typicalDriversSum + variableSum + billsUtilities, [typicalDriversSum, variableSum, billsUtilities]);
@@ -401,7 +435,6 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [baselineLeftover, hoursPerMonth]);
 
-  // --- Challenge-mode derived values ---
   const simCommute = useMemo(() => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))), [baselineCommute, simRemoteDays]);
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
@@ -413,15 +446,7 @@ export default function Page() {
     const per = simLeftover / Math.max(1, hoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [simLeftover, hoursPerMonth]);
-     const simDelta = useMemo(() => simLeftover - baselineLeftover, [
-    simLeftover, baselineLeftover,
-  ]);
-  const simDeltaPerHour = useMemo(() => simFreedom - baselineFreedom, [
-    simFreedom, baselineFreedom,
-  ]);
 
-
-  // Life Efficiency Score
   function norm(x: number, min: number, max: number) {
     if (!isFinite(x)) return 0;
     if (max === min) return 0;
@@ -445,7 +470,6 @@ export default function Page() {
     setImageUrl(canvas.toDataURL("image/png"));
   }, []);
 
-  // --------- Submit logic ----------
   function buildPayload() {
     const sid = sessionId || getOrCreateSessionId();
     return {
@@ -492,8 +516,7 @@ export default function Page() {
       } else {
         setHasBaselinePosted(true);
       }
-    } catch {
-      // swallow
+    } catch (e) {
     } finally {
       isSavingRef.current = false;
     }
@@ -505,10 +528,9 @@ export default function Page() {
   function saveEmail() {
     if (!email) return;
     setEmailSaved(true);
-    postOnce(); // upsert by session_id updates same row
+    postOnce();
   }
 
-  // Auto-post once when user reaches step >= 1 (optional; safe with mutex)
   useEffect(() => {
     if (sessionId && !hasBaselinePosted && step >= 1 && !isSavingRef.current) {
       postOnce();
@@ -521,8 +543,8 @@ export default function Page() {
 
   const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
-  // ---------- Sections (rendered once) ----------
-  const StartSection = (
+  // ---------- Sections ----------
+  const StartSection = () => (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -602,7 +624,7 @@ export default function Page() {
     </Card>
   );
 
-  const CoreInputs = (
+  const CoreInputs = () => (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -805,7 +827,7 @@ export default function Page() {
     </Card>
   );
 
-  const RevealSection = (
+  const RevealSection = () => (
     <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -842,15 +864,17 @@ export default function Page() {
             <div className="relative">
               <div ref={shareRef} className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}>
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
+
                 <div className="text-3xl font-bold mt-1">
                   {currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
-                <div className="text-lg mt-1">
-                  That's {currency}{baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.
-                </div>
+
+                {/* FRIENDLY PER-HOUR LINE */}
+                <HourlyPhrase value={baselineFreedom} currency={currency} className="text-sm mt-2" />
                 <div className="text-[11px] text-zinc-500 mt-1 italic">*Calculated as net discretionary pay per actual hour of life traded.</div>
+
                 {netMonthly > 0 && (
-                  <div className="text-3xl font-bold mt-1">
+                  <div className="text-3xl font-bold mt-3">
                     Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.
                   </div>
                 )}
@@ -911,75 +935,38 @@ export default function Page() {
             </Card>
 
             <Card>
-  <CardBody>
-    <div className="text-sm font-medium">Try quick changes</div>
-    <div className="mt-2 space-y-3 text-sm">
-      <div>
-        <div className="flex justify-between">
-          <span>Remote days / week</span>
-          <span>{simRemoteDays}</span>
-        </div>
-        <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
-      </div>
-      <div>
-        <div className="flex justify-between">
-          <span>Rent change (monthly)</span>
-          <span>{currency}{simRentDelta}</span>
-        </div>
-        <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
-      </div>
-      <div>
-        <div className="flex justify-between">
-          <span>Income change (monthly)</span>
-          <span>{currency}{simIncomeDelta}</span>
-        </div>
-        <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
-      </div>
-    </div>
-
-    {/* SUPER SIMPLE READOUT */}
-    <div className="mt-4 rounded-xl border bg-white p-3 text-sm space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-zinc-600">Before (baseline)</span>
-        <span className="font-medium">
-          {currency}{Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}{baselineFreedom.toFixed(2)}/hr
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-zinc-600">After (with changes)</span>
-        <span className="font-semibold">
-          {currency}{Math.max(0, simLeftover).toLocaleString()} / mo · {currency}{simFreedom.toFixed(2)}/hr
-        </span>
-      </div>
-
-      <div className={`flex items-center justify-between ${simDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-        <span>Difference</span>
-        <span className="font-semibold">
-          {simDelta >= 0 ? "+" : ""}{currency}{simDelta.toLocaleString()} / mo · {simDeltaPerHour >= 0 ? "+" : ""}{currency}{simDeltaPerHour.toFixed(2)}/hr
-        </span>
-      </div>
-
-      <div className="text-xs text-zinc-600 pt-1">
-        Plain English: You’d keep{" "}
-        <span className="font-medium">
-          {simDelta >= 0 ? `${currency}${simDelta.toLocaleString()} more` : `${currency}${Math.abs(simDelta).toLocaleString()} less`}
-        </span>{" "}
-        each month with the sliders set above.
-      </div>
-      <div className="text-[11px] text-zinc-500">
-        (Only the three sliders affect this. All your other inputs stay the same.)
-      </div>
-    </div>
-  </CardBody>
-</Card>
-
+              <CardBody>
+                <div className="text-sm font-medium">Challenge mode</div>
+                <div className="mt-2 space-y-3 text-sm">
+                  <div>
+                    <div className="flex justify-between"><span>Remote days / week</span><span>{simRemoteDays}</span></div>
+                    <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between"><span>Rent change (monthly)</span><span>{currency}{simRentDelta}</span></div>
+                    <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
+                    <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
+                  </div>
+                </div>
+                <div className="mt-3 text-xs text-zinc-500">
+                  Simulated: <span className="font-semibold">{currency}{Math.max(0, simLeftover).toLocaleString()}</span> ({currency}{simFreedom.toFixed(2)}/hr)
+                </div>
+                <div className="text-xs text-zinc-500">Δ vs your baseline: {currency}{(simLeftover - baselineLeftover).toLocaleString()}</div>
+                {!emailSaved && <div className="text-[11px] text-zinc-500 mt-2">Email your optimised plan & settings.</div>}
+              </CardBody>
+            </Card>
 
             <Card>
               <CardBody>
                 <div className="text-sm">Your chosen month (with your commute & drivers)</div>
                 <div className="text-2xl font-semibold mt-1">
-                  Kept: <Money value={leftover} currency={currency} /> ({currency}{effectivePerHour.toFixed(2)}/hr)
+                  Kept: <Money value={leftover} currency={currency} />
                 </div>
+                {/* FRIENDLY PER-HOUR LINE FOR CURRENT CHOICES */}
+                <HourlyPhrase value={effectivePerHour} currency={currency} className="text-sm mt-1" />
                 <div className="text-xs text-zinc-500 mt-2">
                   Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
                   Kids: <Money value={dependentsMonthly} currency={currency} />
@@ -1029,25 +1016,22 @@ export default function Page() {
     </Card>
   );
 
-  // ---------- Render (no remounts) ----------
   return (
     <div className="min-h-screen text-zinc-900 py-10 bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]">
       <div className="max-w-5xl mx-auto px-4">
-        <div className={step === 0 ? "" : "hidden"} aria-hidden={step !== 0}>
-          {StartSection}
-        </div>
-        <div className={step === 1 ? "" : "hidden"} aria-hidden={step !== 1}>
-          {CoreInputs}
-        </div>
-        <div className={step === 2 ? "" : "hidden"} aria-hidden={step !== 2}>
-          {RevealSection}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div key={step} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+            {step === 0 && <StartSection />}
+            {step === 1 && <CoreInputs />}
+            {step === 2 && <RevealSection />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
-/* ---------- Session helpers ---------- */
+/* ---------- Session helpers (NO template literals) ---------- */
 let __sidCounter = 0;
 function simpleId() {
   return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
@@ -1084,65 +1068,34 @@ function getOrCreateSessionId(): string {
   }
 }
 
-/* ---------- Sticky inputs (uncontrolled with ref sync) ---------- */
-function StickyTextInput(props: {
-  id?: string;
-  "data-probe"?: string;
-  defaultValue: string;
-  onValue: (t: string) => void;
-  className?: string;
-  placeholder?: string;
-  "aria-label"?: string;
-}) {
+// ---------- Tiny sticky inputs ----------
+function StickyTextInput(props: { defaultValue: string; onValue: (t: string) => void; className?: string; placeholder?: string; "aria-label"?: string; id?: string }) {
   const { defaultValue, onValue, ...rest } = props;
   const ref = React.useRef<HTMLInputElement>(null);
   const lastExternal = React.useRef(defaultValue);
-
   useEffect(() => {
     if (ref.current && lastExternal.current !== defaultValue) {
       ref.current.value = defaultValue;
       lastExternal.current = defaultValue;
     }
   }, [defaultValue]);
-
-  return (
-    <input
-      ref={ref}
-      type="text"
-      autoComplete="off"
-      spellCheck={false}
-      defaultValue={defaultValue}
-      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
-      {...rest}
-    />
-  );
+  return <input ref={ref} type="text" autoComplete="off" spellCheck={false} defaultValue={defaultValue} onInput={(e)=>onValue((e.target as HTMLInputElement).value)} {...rest} />;
 }
-
-function StickyNumericInput(props: {
-  id?: string;
-  "data-probe"?: string;
-  defaultValue: string;
-  onValue: (t: string) => void;
-  className?: string;
-  "aria-label"?: string;
-}) {
+function StickyNumericInput(props: { defaultValue: string; onValue: (t: string) => void; className?: string; "aria-label"?: string; id?: string }) {
   const { defaultValue, onValue, ...rest } = props;
   const ref = React.useRef<HTMLInputElement>(null);
   const lastExternal = React.useRef(defaultValue);
-
   useEffect(() => {
     if (ref.current && lastExternal.current !== defaultValue) {
       ref.current.value = defaultValue;
       lastExternal.current = defaultValue;
     }
   }, [defaultValue]);
-
   const normalize = (v: string) => {
     if (v.trim() === "" || v === "-") return "0";
     const n = Number(v.replace(/[, ]/g, ""));
     return Number.isFinite(n) ? String(n) : "0";
   };
-
   return (
     <input
       ref={ref}
@@ -1152,10 +1105,9 @@ function StickyNumericInput(props: {
       autoComplete="off"
       spellCheck={false}
       defaultValue={defaultValue}
-      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
+      onInput={(e)=>onValue((e.target as HTMLInputElement).value)}
       onBlur={() => {
-        const el = ref.current;
-        if (!el) return;
+        const el = ref.current; if (!el) return;
         const pos = el.selectionStart ?? el.value.length;
         const norm = normalize(el.value);
         el.value = norm;
@@ -1166,3 +1118,18 @@ function StickyNumericInput(props: {
     />
   );
 }
+
+// ---------- Self-tests (optional) ----------
+(function runSelfTests() {
+  console.assert(currencySymbol("UK") === "£", "UK currency £");
+  console.assert(currencySymbol("US") === "$", "US currency $");
+  console.assert(suggestedHousing("UK", "share") === 800, "UK share rent 800");
+  console.assert(suggestedHousing("EU", "solo") > 0, "EU solo rent > 0");
+  const typicalSum = Object.values(DRIVER_TYPICAL).reduce((a, b) => a + b, 0);
+  console.assert(typicalSum === 140 + 110 + 120 + 90 + 120 + 45 + 25, "Driver typical sum matches");
+  console.assert(approximateFromGross("UK", 4000) > 2000, "Gross→Net produces net");
+  console.assert(computeHealthcare("US", "employer", 0) === 200, "US employer");
+  console.assert(computeHealthcare("US", null, 0) === 250, "US default");
+  console.assert(computeSavingsFromRate(2000, 8) === 160, "8% of 2000 is 160");
+  console.assert(childCostPreset("UK", 2, "nursery") > childCostPreset("UK", 1, "school"), "Nursery & more kids cost more");
+})();
