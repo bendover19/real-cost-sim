@@ -192,6 +192,13 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
   return Math.round((netMonthly * Math.max(0, Math.min(20, ratePct))) / 100);
 }
 
+// NEW helper: parse numeric text safely without breaking typing
+function toNumberSafe(v: string): number {
+  if (v.trim() === "" || v === "-") return 0;
+  const n = Number(v.replace(/[, ]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
 // ---------- Session helpers (no WebCrypto) ----------
 let __sidCounter = 0;
 function simpleId() {
@@ -362,8 +369,15 @@ export default function Page() {
 
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
-  const [takeHome, setTakeHome] = useState<number>(2200);
-  const [housing, setHousing] = useState<number>(1200);
+
+  // STRING-FIRST: keep what the user types
+  const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
+  const [housingStr, setHousingStr] = useState<string>("1200");
+
+  // Derived numeric values used everywhere else
+  const takeHome = useMemo(() => toNumberSafe(takeHomeStr), [takeHomeStr]);
+  const housing = useMemo(() => toNumberSafe(housingStr), [housingStr]);
+
   const [housingTouched, setHousingTouched] = useState<boolean>(false);
   const [household, setHousehold] = useState<Household>("solo");
   const [childrenCount, setChildrenCount] = useState<number>(0);
@@ -411,8 +425,12 @@ export default function Page() {
     return Math.max(0, base);
   }, [isGross, takeHome, region]);
 
+  // When region/household/urbanicity change, update housing (only if user hasn't touched it)
   useEffect(() => {
-    if (!housingTouched) setHousing(Math.round(suggestedHousing(region, household) * rentMul));
+    if (!housingTouched) {
+      const v = Math.round(suggestedHousing(region, household) * rentMul);
+      setHousingStr(String(v));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region, household, urbanicity]);
 
@@ -699,12 +717,11 @@ export default function Page() {
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
               <input
-                type="number"
-                value={takeHome === 0 ? "" : takeHome}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setTakeHome(v === "" ? 0 : Number(v));
-                }}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={takeHomeStr}
+                onChange={(e) => setTakeHomeStr(e.target.value)}
                 className="w-full rounded-lg border p-2 bg-white"
               />
             </div>
@@ -717,12 +734,13 @@ export default function Page() {
             <div className="flex items-center gap-2 mt-2">
               <span className="text-zinc-500">{currency}</span>
               <input
-                type="number"
-                value={housing === 0 ? "" : housing}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={housingStr}
                 onChange={(e) => {
-                  const v = e.target.value;
                   setHousingTouched(true);
-                  setHousing(v === "" ? 0 : Number(v));
+                  setHousingStr(e.target.value);
                 }}
                 className="w-full rounded-lg border p-2 bg-white"
               />
@@ -734,7 +752,8 @@ export default function Page() {
                 type="button"
                 className="underline"
                 onClick={() => {
-                  setHousing(Math.round(suggestedHousing(region, household) * rentMul));
+                  const v = Math.round(suggestedHousing(region, household) * rentMul);
+                  setHousingStr(String(v));
                   setHousingTouched(true);
                 }}
               >
