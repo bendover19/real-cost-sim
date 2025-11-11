@@ -196,7 +196,7 @@ function toNumberSafe(v: string): number {
  * - StickyTextInput: generic text (City)
  * - StickyNumericInput: numeric (Income/Housing)
  * ---------------------------------------------------------------- */
-function useStickyFocus(ref: React.RefObject<HTMLInputElement>) {
+function useStickyFocus(ref: React.RefObject<HTMLInputElement | null>) {
   return React.useCallback(() => {
     const el = ref.current;
     if (!el) return;
