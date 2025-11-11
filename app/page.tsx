@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 
 /**
  * Real Cost Simulator — page.tsx (stable session + single-submit)
- * This version makes Income + Housing inputs UNCONTROLLED (with refs)
- * to fully eliminate focus loss while typing.
+ * Sticky inputs (City, Income, Housing) that re-assert focus + caret
+ * to prevent third-party scripts/extensions from stealing focus.
+ * Sliders unchanged.
  */
 
 const INGEST_PATH = "/api/ingest";
@@ -190,43 +191,140 @@ function toNumberSafe(v: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// ---------- Session helpers (no WebCrypto) ----------
-let __sidCounter = 0;
-function simpleId() {
-  return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
-}
-function getCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return m ? decodeURIComponent(m[1]) : "";
-}
-function setCookie(name: string, value: string, days = 365) {
-  if (typeof document === "undefined") return;
-  const maxAge = days * 24 * 60 * 60;
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
-}
-function getOrCreateSessionId(): string {
-  try {
-    const fromCookie = getCookie("rcs_sid");
-    const fromLS = typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
-    const existing = fromCookie || fromLS;
-    if (existing) {
-      if (!fromCookie) setCookie("rcs_sid", existing);
-      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
-      return existing;
+/* ----------------------------------------------------------------
+ * Sticky Inputs (focus-asserting)
+ * - StickyTextInput: generic text (City)
+ * - StickyNumericInput: numeric (Income/Housing)
+ * ---------------------------------------------------------------- */
+function useStickyFocus(ref: React.RefObject<HTMLInputElement>) {
+  return React.useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.activeElement !== el) {
+      const pos = el.selectionStart ?? el.value.length;
+      el.focus({ preventScroll: true });
+      try {
+        el.setSelectionRange(pos, pos);
+      } catch {}
     }
-    const id = simpleId();
-    setCookie("rcs_sid", id);
-    if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
-    return id;
-  } catch {
-    const id = "sid_" + Math.random().toString(36).slice(2);
-    setCookie("rcs_sid", id);
-    try {
-      if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
-    } catch {}
-    return id;
-  }
+  }, [ref]);
+}
+
+function StickyTextInput({
+  defaultValue,
+  onValue,
+  onTouched,
+  className,
+  id,
+  placeholder,
+  "aria-label": ariaLabel,
+}: {
+  defaultValue: string;
+  onValue: (text: string) => void;
+  onTouched?: () => void;
+  className?: string;
+  id?: string;
+  placeholder?: string;
+  "aria-label"?: string;
+}) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  const stickFocus = useStickyFocus(ref);
+  const lastExternal = React.useRef(defaultValue);
+
+  React.useEffect(() => {
+    if (lastExternal.current !== defaultValue && ref.current) {
+      ref.current.value = defaultValue;
+      lastExternal.current = defaultValue;
+    }
+  }, [defaultValue]);
+
+  return (
+    <input
+      ref={ref}
+      id={id}
+      aria-label={ariaLabel}
+      type="text"
+      autoComplete="off"
+      spellCheck={false}
+      defaultValue={defaultValue}
+      placeholder={placeholder}
+      className={className}
+      onFocus={() => {
+        onTouched?.();
+        stickFocus();
+      }}
+      onInput={(e) => {
+        onTouched?.();
+        onValue((e.target as HTMLInputElement).value);
+        requestAnimationFrame(stickFocus);
+      }}
+    />
+  );
+}
+
+function StickyNumericInput({
+  defaultValue,
+  onValue,
+  onTouched,
+  className,
+  id,
+  "aria-label": ariaLabel,
+}: {
+  defaultValue: string;
+  onValue: (text: string) => void; // returns raw string while typing
+  onTouched?: () => void;
+  className?: string;
+  id?: string;
+  "aria-label"?: string;
+}) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  const stickFocus = useStickyFocus(ref);
+  const lastExternal = React.useRef(defaultValue);
+
+  React.useEffect(() => {
+    if (lastExternal.current !== defaultValue && ref.current) {
+      ref.current.value = defaultValue;
+      lastExternal.current = defaultValue;
+    }
+  }, [defaultValue]);
+
+  const normalize = (v: string) => {
+    if (v.trim() === "" || v === "-") return "0";
+    const n = Number(v.replace(/[, ]/g, ""));
+    return Number.isFinite(n) ? String(n) : "0";
+  };
+
+  return (
+    <input
+      ref={ref}
+      id={id}
+      aria-label={ariaLabel}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      spellCheck={false}
+      defaultValue={defaultValue}
+      className={className}
+      onFocus={() => {
+        onTouched?.();
+        stickFocus();
+      }}
+      onInput={(e) => {
+        const v = (e.target as HTMLInputElement).value;
+        onTouched?.();
+        onValue(v);
+        requestAnimationFrame(stickFocus);
+      }}
+      onBlur={() => {
+        const el = ref.current;
+        if (!el) return;
+        const norm = normalize(el.value);
+        el.value = norm;
+        onValue(norm);
+      }}
+    />
+  );
 }
 
 // ---------- Small primitives ----------
@@ -316,7 +414,7 @@ export default function Page() {
   // Session id (cookie + LS)
   const [sessionId, setSessionId] = useState<string>("");
   // Submit guard + baseline-posted flag
-  const isSavingRef = useRef(false);
+  const isSavingRef = React.useRef(false);
   const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
 
   useEffect(() => {
@@ -361,11 +459,9 @@ export default function Page() {
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
 
-  // We keep user-typed text in state (for math) BUT inputs are UNCONTROLLED.
+  // We keep user-typed text in state (for math) BUT inputs are UNCONTROLLED/Sticky.
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
-  const incomeRef = useRef<HTMLInputElement>(null);
-  const housingRef = useRef<HTMLInputElement>(null);
 
   // Derived numeric values used everywhere else
   const takeHome = useMemo(() => toNumberSafe(takeHomeStr), [takeHomeStr]);
@@ -398,7 +494,7 @@ export default function Page() {
   // Email/share
   const [email, setEmail] = useState<string>("");
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
-  const shareRef = useRef<HTMLDivElement>(null);
+  const shareRef = React.useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // --- Challenge mode (what-if sliders) ---
@@ -418,12 +514,11 @@ export default function Page() {
     return Math.max(0, base);
   }, [isGross, takeHome, region]);
 
-  // Keep housing suggestion only if user hasn't changed it (update the DOM input via ref)
+  // Keep housing suggestion only if user hasn't changed it
   useEffect(() => {
     if (!housingTouched) {
       const v = Math.round(suggestedHousing(region, household) * rentMul);
       setHousingStr(String(v));
-      if (housingRef.current) housingRef.current.value = String(v);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region, household, urbanicity]);
@@ -613,7 +708,14 @@ export default function Page() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm">City name (optional)</label>
-              <input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="e.g., London, Berlin, NYC" className="w-full mt-2 rounded-lg border p-2 bg-white" />
+              <StickyTextInput
+                id="city-input"
+                aria-label="City name"
+                defaultValue={cityName}
+                onValue={setCityName}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+                placeholder="e.g., London, Berlin, NYC"
+              />
               <div className="text-[11px] text-zinc-500 mt-1">Used for your badge only.</div>
             </div>
             <div>
@@ -687,21 +789,11 @@ export default function Page() {
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
-              {/* UNCONTROLLED input + ref; keep state in sync onInput */}
-              <input
-                ref={incomeRef}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete="off"
-                spellCheck={false}
+              <StickyNumericInput
+                id="income-input"
+                aria-label="Monthly income"
                 defaultValue={takeHomeStr}
-                onInput={(e) => setTakeHomeStr((e.target as HTMLInputElement).value)}
-                onBlur={() => {
-                  const norm = String(toNumberSafe(incomeRef.current?.value ?? ""));
-                  if (incomeRef.current) incomeRef.current.value = norm;
-                  setTakeHomeStr(norm);
-                }}
+                onValue={(t) => setTakeHomeStr(t)}
                 className="w-full rounded-lg border p-2 bg-white"
               />
             </div>
@@ -713,24 +805,12 @@ export default function Page() {
             <label className="text-sm">Your rent or mortgage each month (your share)</label>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-zinc-500">{currency}</span>
-              {/* UNCONTROLLED input + ref; keep state in sync onInput */}
-              <input
-                ref={housingRef}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete="off"
-                spellCheck={false}
+              <StickyNumericInput
+                id="housing-input"
+                aria-label="Monthly housing"
                 defaultValue={housingStr}
-                onInput={(e) => {
-                  setHousingTouched(true);
-                  setHousingStr((e.target as HTMLInputElement).value);
-                }}
-                onBlur={() => {
-                  const norm = String(toNumberSafe(housingRef.current?.value ?? ""));
-                  if (housingRef.current) housingRef.current.value = norm;
-                  setHousingStr(norm);
-                }}
+                onTouched={() => setHousingTouched(true)}
+                onValue={(t) => setHousingStr(t)}
                 className="w-full rounded-lg border p-2 bg-white"
               />
             </div>
@@ -742,8 +822,7 @@ export default function Page() {
                 className="underline"
                 onClick={() => {
                   const v = Math.round(suggestedHousing(region, household) * rentMul);
-                  if (housingRef.current) housingRef.current.value = String(v);
-                  setHousingStr(String(v));
+                  setHousingStr(String(v)); // StickyNumericInput mirrors via defaultValue
                   setHousingTouched(true);
                 }}
               >
@@ -1197,6 +1276,45 @@ export default function Page() {
       </div>
     </div>
   );
+}
+
+// ---------- Session helpers (no WebCrypto) ----------
+let __sidCounter = 0;
+function simpleId() {
+  return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
+}
+function getCookie(name: string) {
+  if (typeof document === "undefined") return "";
+  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return m ? decodeURIComponent(m[1]) : "";
+}
+function setCookie(name: string, value: string, days = 365) {
+  if (typeof document === "undefined") return;
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
+}
+function getOrCreateSessionId(): string {
+  try {
+    const fromCookie = getCookie("rcs_sid");
+    const fromLS = typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
+    const existing = fromCookie || fromLS;
+    if (existing) {
+      if (!fromCookie) setCookie("rcs_sid", existing);
+      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
+      return existing;
+    }
+    const id = simpleId();
+    setCookie("rcs_sid", id);
+    if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
+    return id;
+  } catch {
+    const id = "sid_" + Math.random().toString(36).slice(2);
+    setCookie("rcs_sid", id);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
+    } catch {}
+    return id;
+  }
 }
 
 // ---------- Self-tests (optional) ----------
