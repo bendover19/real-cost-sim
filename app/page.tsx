@@ -4,16 +4,10 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 
-/**
- * Real Cost Simulator — page.tsx
- * Aggressive focus lock for text inputs to stop third-party scripts stealing focus.
- * Sliders are untouched.
- */
-
 const INGEST_PATH = "/api/ingest";
 
 /** ----------------------------------------------------------------
- * Smooth, mobile-friendly range input (UNCHANGED)
+ * Smooth, mobile-friendly range input (unchanged)
  * ---------------------------------------------------------------- */
 const InputRange: React.FC<
   Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "onInput"> & {
@@ -102,7 +96,6 @@ const COMMUTE_CTX: Record<CommuteContext, { label: string; commuteMul: number }>
   carDependent: { label: "Car-dependent city", commuteMul: 1.3 },
 };
 
-// Typical monthly amounts for driver categories (anchors for defaults)
 const DRIVER_TYPICAL: Record<DriverKey, number> = {
   belonging: 140,
   identity: 110,
@@ -113,7 +106,6 @@ const DRIVER_TYPICAL: Record<DriverKey, number> = {
   moneyPressure: 25,
 };
 
-// UI meta for drivers
 const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string; color: string }> = {
   belonging: { emoji: "🫶", title: "Belonging", sub: "Not being the ghost at work or with friends", color: "rose" },
   identity: { emoji: "👔", title: "Identity", sub: "Looking like you belong where you work", color: "violet" },
@@ -124,7 +116,6 @@ const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string
   moneyPressure: { emoji: "💸", title: "Money pressure", sub: "BNPL/overdraft to smooth the month", color: "orange" },
 };
 
-// Wide slider limits per driver
 const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number }> = {
   belonging: { min: 0, max: 800, step: 5 },
   identity: { min: 0, max: 800, step: 5 },
@@ -135,7 +126,6 @@ const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number 
   moneyPressure: { min: 0, max: 300, step: 5 },
 };
 
-// Slider limits for variable spends
 const SPEND_LIMITS: Record<SpendKey, { label: string; min: number; max: number; step: number }> = {
   pet: { label: "🐾 Pet costs (food, insurance, sitter/boarding, horse, etc.)", min: 0, max: 2000, step: 10 },
   therapy: { label: "🧠 Therapy / coaching / counselling", min: 0, max: 2000, step: 10 },
@@ -182,252 +172,10 @@ function computeHealthcare(regionId: RegionId, plan: HealthPlanUS | null, overri
 function computeSavingsFromRate(netMonthly: number, ratePct: number) {
   return Math.round((netMonthly * Math.max(0, Math.min(20, ratePct))) / 100);
 }
-
-// Parse numeric text safely without breaking typing
 function toNumberSafe(v: string): number {
   if (v.trim() === "" || v === "-") return 0;
   const n = Number(v.replace(/[, ]/g, ""));
   return Number.isFinite(n) ? n : 0;
-}
-
-/* ----------------------------------------------------------------
- * AGGRESSIVE GLOBAL FOCUS LOCK (for text inputs only)
- * Re-asserts focus to the active text input while typing if a CMP/ads
- * element steals it. Sliders/range inputs are not touched.
- * ---------------------------------------------------------------- */
-function installAggressiveInputFocusLock() {
-  let lastTypingInput: HTMLInputElement | null = null;
-  let watchdog: number | null = null;
-  let typing = false;
-
-  const isTextLike = (el: Element | null): el is HTMLInputElement => {
-    if (!el) return false;
-    if (!(el instanceof HTMLInputElement)) return false;
-    const t = (el.type || "text").toLowerCase();
-    // exclude range to avoid affecting sliders
-    if (t === "range") return false;
-    return ["text", "search", "email", "tel", "url", "number", "password"].includes(t);
-  };
-
-  const isKnownCMP = (el: Element | null): boolean => {
-    if (!el) return true;
-    if (el instanceof HTMLIFrameElement) {
-      const name = (el.getAttribute("name") || "").toLowerCase();
-      const src = (el.getAttribute("src") || "").toLowerCase();
-      if (name === "googlefcPresent") return true;
-      if (src.includes("fundingchoices") || src.includes("google.com")) return true;
-    }
-    const badSelectors = [
-      'iframe[name="googlefcPresent"]',
-      'iframe[src*="fundingchoices"]',
-      '[id^="fc-"]',
-      '[class*="fc-"]',
-      '[data-fc-consent]',
-    ].join(",");
-    try {
-      if ((el as HTMLElement).matches?.(badSelectors)) return true;
-    } catch {}
-    // ascend
-    let p: HTMLElement | null = (el as HTMLElement) ?? null;
-    while (p) {
-      try {
-        if (p.matches?.(badSelectors)) return true;
-      } catch {}
-      p = p.parentElement;
-    }
-    return false;
-  };
-
-  // Tame FC iframes so they can't be tabbed/clicked
-  const tameCMP = (root: ParentNode = document) => {
-    const frames = (root as Document | HTMLElement).querySelectorAll?.('iframe[name="googlefcPresent"], iframe[src*="fundingchoices"]');
-    frames?.forEach((f) => {
-      if (f instanceof HTMLIFrameElement) {
-        f.tabIndex = -1;
-        f.setAttribute("aria-hidden", "true");
-        try {
-          (f.style as any).pointerEvents = "none";
-          (f.style as any).opacity = "0";
-          (f.style as any).width = "0";
-          (f.style as any).height = "0";
-        } catch {}
-      }
-    });
-  };
-
-  tameCMP(document);
-  const mo = new MutationObserver((muts) => {
-    muts.forEach((m) => {
-      m.addedNodes.forEach((n) => {
-        if (n instanceof HTMLElement || n instanceof DocumentFragment) tameCMP(n as ParentNode);
-      });
-    });
-  });
-  mo.observe(document.documentElement, { childList: true, subtree: true });
-
-  const startWatchdog = () => {
-    if (watchdog != null) return;
-    watchdog = window.setInterval(() => {
-      if (!typing || !lastTypingInput) return;
-      const ae = document.activeElement as Element | null;
-      if (ae === lastTypingInput) return;
-      // If focus moved to a non-text element or a known CMP, yank it back
-      if (!isTextLike(ae) || isKnownCMP(ae)) {
-        const pos = lastTypingInput.selectionStart ?? lastTypingInput.value.length;
-        lastTypingInput.focus({ preventScroll: true });
-        try {
-          lastTypingInput.setSelectionRange(pos, pos);
-        } catch {}
-      }
-    }, 50);
-  };
-
-  const stopWatchdogSoon = () => {
-    // small grace to cover quick steals after blur
-    window.setTimeout(() => {
-      typing = false;
-      if (watchdog != null) {
-        window.clearInterval(watchdog);
-        watchdog = null;
-      }
-    }, 120);
-  };
-
-  const onFocusIn = (e: Event) => {
-    const t = e.target as Element | null;
-    if (isTextLike(t)) {
-      lastTypingInput = t;
-    }
-  };
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    const t = e.target as Element | null;
-    if (!isTextLike(t)) return;
-    lastTypingInput = t;
-    typing = true;
-    startWatchdog();
-  };
-
-  const onInput = (e: Event) => {
-    const t = e.target as Element | null;
-    if (!isTextLike(t)) return;
-    lastTypingInput = t;
-    typing = true;
-    startWatchdog();
-  };
-
-  const onBlur = (e: FocusEvent) => {
-    const t = e.target as Element | null;
-    if (t && t === lastTypingInput) {
-      // if we blurred to CMP/nowhere, watchdog will snap us back;
-      // otherwise stop shortly after legitimate blur
-      const ae = document.activeElement as Element | null;
-      if (!isTextLike(ae) || isKnownCMP(ae)) {
-        typing = true; // keep watchdog alive to refocus immediately
-        startWatchdog();
-      } else {
-        stopWatchdogSoon();
-      }
-    }
-  };
-
-  window.addEventListener("focusin", onFocusIn, true);
-  window.addEventListener("keydown", onKeyDown, true);
-  window.addEventListener("input", onInput, true);
-  window.addEventListener("blur", onBlur, true);
-
-  return () => {
-    window.removeEventListener("focusin", onFocusIn, true);
-    window.removeEventListener("keydown", onKeyDown, true);
-    window.removeEventListener("input", onInput, true);
-    window.removeEventListener("blur", onBlur, true);
-    mo.disconnect();
-    if (watchdog != null) window.clearInterval(watchdog);
-  };
-}
-
-/* ----------------------------------------------------------------
- * Sticky inputs that feel uncontrolled (don’t fight focus themselves).
- * The global lock above handles hostile focus steals.
- * ---------------------------------------------------------------- */
-function StickyTextInput(props: {
-  defaultValue: string;
-  onValue: (text: string) => void;
-  className?: string;
-  id?: string;
-  placeholder?: string;
-  "aria-label"?: string;
-}) {
-  const { defaultValue, onValue, ...rest } = props;
-  const ref = React.useRef<HTMLInputElement>(null);
-  const lastExternal = React.useRef(defaultValue);
-
-  React.useEffect(() => {
-    if (lastExternal.current !== defaultValue && ref.current) {
-      ref.current.value = defaultValue;
-      lastExternal.current = defaultValue;
-    }
-  }, [defaultValue]);
-
-  return (
-    <input
-      ref={ref}
-      type="text"
-      autoComplete="off"
-      spellCheck={false}
-      defaultValue={defaultValue}
-      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
-      {...rest}
-    />
-  );
-}
-
-function StickyNumericInput(props: {
-  defaultValue: string;
-  onValue: (text: string) => void;
-  className?: string;
-  id?: string;
-  "aria-label"?: string;
-}) {
-  const { defaultValue, onValue, ...rest } = props;
-  const ref = React.useRef<HTMLInputElement>(null);
-  const lastExternal = React.useRef(defaultValue);
-
-  React.useEffect(() => {
-    if (lastExternal.current !== defaultValue && ref.current) {
-      ref.current.value = defaultValue;
-      lastExternal.current = defaultValue;
-    }
-  }, [defaultValue]);
-
-  const normalize = (v: string) => {
-    if (v.trim() === "" || v === "-") return "0";
-    const n = Number(v.replace(/[, ]/g, ""));
-    return Number.isFinite(n) ? String(n) : "0";
-  };
-
-  return (
-    <input
-      ref={ref}
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      autoComplete="off"
-      spellCheck={false}
-      defaultValue={defaultValue}
-      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
-      onBlur={() => {
-        const el = ref.current;
-        if (!el) return;
-        const pos = el.selectionStart ?? el.value.length;
-        const norm = normalize(el.value);
-        el.value = norm;
-        onValue(norm);
-        try { el.setSelectionRange(pos, pos); } catch {}
-      }}
-      {...rest}
-    />
-  );
 }
 
 // ---------- Small primitives ----------
@@ -446,25 +194,9 @@ const Money: React.FC<{ value: number; currency: string }> = ({ value, currency 
 
 // ---------- Chart ----------
 function BarChart({
-  currency,
-  net,
-  housing,
-  commute,
-  maintenance,
-  dependents,
-  healthcare,
-  debt,
-  savings,
+  currency, net, housing, commute, maintenance, dependents, healthcare, debt, savings,
 }: {
-  currency: string;
-  net: number;
-  housing: number;
-  commute: number;
-  maintenance: number;
-  dependents: number;
-  healthcare: number;
-  debt: number;
-  savings: number;
+  currency: string; net: number; housing: number; commute: number; maintenance: number; dependents: number; healthcare: number; debt: number; savings: number;
 }) {
   const safeNet = Math.max(1, net);
   const slices = [
@@ -490,14 +222,12 @@ function BarChart({
         {slices.map((s) => (
           <div key={s.label} className="flex items-center gap-1">
             <span className={`inline-block w-3 h-3 rounded ${s.color}`} />
-            {s.label} {currency}
-            {Math.max(0, s.value).toLocaleString()}
+            {s.label} {currency}{Math.max(0, s.value).toLocaleString()}
           </div>
         ))}
         <div className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded bg-emerald-500" />
-          Leftover {currency}
-          {Math.max(0, left).toLocaleString()}
+          Leftover {currency}{Math.max(0, left).toLocaleString()}
         </div>
       </div>
       <div className="clear-both" />
@@ -507,12 +237,6 @@ function BarChart({
 
 // ---------- Page ----------
 export default function Page() {
-  // Install aggressive input focus lock once on mount
-  useEffect(() => {
-    const cleanup = installAggressiveInputFocusLock();
-    return cleanup;
-  }, []);
-
   const [step, setStep] = useState<number>(0);
   const progressPct = step === 0 ? 33 : step === 1 ? 66 : 100;
 
@@ -522,13 +246,10 @@ export default function Page() {
 
   // Session id (cookie + LS)
   const [sessionId, setSessionId] = useState<string>("");
-  // Submit guard + baseline-posted flag
   const isSavingRef = React.useRef(false);
   const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
 
-  useEffect(() => {
-    setSessionId(getOrCreateSessionId());
-  }, []);
+  useEffect(() => { setSessionId(getOrCreateSessionId()); }, []);
 
   // UTM / A/B cookie
   useEffect(() => {
@@ -537,14 +258,10 @@ export default function Page() {
       const utm = url.searchParams.get("utm_source") || url.searchParams.get("ref");
       if (utm) setLandSource(utm);
       const params = new URLSearchParams(url.search);
-      const qCity = params.get("city");
-      if (qCity) setCityName(qCity);
-      const qRegion = params.get("region") as RegionId | null;
-      if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
-      const qUrban = params.get("urban") as Urbanicity | null;
-      if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
-      const qCtx = params.get("ctx") as CommuteContext | null;
-      if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
+      const qCity = params.get("city"); if (qCity) setCityName(qCity);
+      const qRegion = params.get("region") as RegionId | null; if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
+      const qUrban = params.get("urban") as Urbanicity | null; if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
+      const qCtx = params.get("ctx") as CommuteContext | null; if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
     } catch {}
     try {
       const existing = document.cookie.match(/rcs_ab=([AB])/);
@@ -568,11 +285,10 @@ export default function Page() {
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
 
-  // Keep user-typed text in strings; inputs feel uncontrolled
+  // “Feels uncontrolled” text inputs
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
 
-  // Derived numeric values
   const takeHome = useMemo(() => toNumberSafe(takeHomeStr), [takeHomeStr]);
   const housing = useMemo(() => toNumberSafe(housingStr), [housingStr]);
 
@@ -589,29 +305,25 @@ export default function Page() {
   const [debtMonthly, setDebtMonthly] = useState<number>(150);
   const [studentLoan, setStudentLoan] = useState<number>(0);
 
-  // Drivers & spends
   const [drivers, setDrivers] = useState<Record<DriverKey, number>>({ ...DRIVER_TYPICAL });
   const [spends, setSpends] = useState<Record<SpendKey, number>>({ pet: 0, therapy: 0, supportOthers: 0, health: 0 });
 
-  // Healthcare (US)
   const [usHealthPlan, setUsHealthPlan] = useState<HealthPlanUS | null>(null);
   const [usHealthcareOverride, setUsHealthcareOverride] = useState<number>(0);
 
-  // Savings
   const [savingsRate, setSavingsRate] = useState<number>(8);
 
-  // Email/share
   const [email, setEmail] = useState<string>("");
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = React.useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // --- Challenge mode ---
-  const [simRemoteDays, setSimRemoteDays] = useState<number>(0); // 0–5
-  const [simRentDelta, setSimRentDelta] = useState<number>(0); // monthly +/- to housing
-  const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0); // monthly +/- to income
+  // Challenge mode
+  const [simRemoteDays, setSimRemoteDays] = useState<number>(0);
+  const [simRentDelta, setSimRentDelta] = useState<number>(0);
+  const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0);
 
-  // Derived
+  // Derived calcs
   const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
   const urb = URBANICITY[urbanicity];
   const ctx = COMMUTE_CTX[commuteCtx];
@@ -623,7 +335,6 @@ export default function Page() {
     return Math.max(0, base);
   }, [isGross, takeHome, region]);
 
-  // Keep housing suggestion only if user hasn't changed it
   useEffect(() => {
     if (!housingTouched) {
       const v = Math.round(suggestedHousing(region, household) * rentMul);
@@ -663,7 +374,6 @@ export default function Page() {
   }, [leftover, hoursPerMonth]);
   const maintenancePct = useMemo(() => Math.max(0, Math.round((maintenanceSum / Math.max(1, netMonthly)) * 100)), [maintenanceSum, netMonthly]);
 
-  // Baseline (PT + Typical drivers)
   const baselineCommute = useMemo(() => Math.round(regionData.commutePT * commuteMul), [regionData, commuteMul]);
   const typicalDriversSum = useMemo(() => (Object.keys(DRIVER_TYPICAL) as DriverKey[]).reduce((s, k) => s + DRIVER_TYPICAL[k], 0), []);
   const baselineMaintenance = useMemo(() => typicalDriversSum + variableSum + billsUtilities, [typicalDriversSum, variableSum, billsUtilities]);
@@ -676,7 +386,6 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [baselineLeftover, hoursPerMonth]);
 
-  // --- Challenge-mode derived values ---
   const simCommute = useMemo(() => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))), [baselineCommute, simRemoteDays]);
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
@@ -689,7 +398,6 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [simLeftover, hoursPerMonth]);
 
-  // Life Efficiency Score
   function norm(x: number, min: number, max: number) {
     if (!isFinite(x)) return 0;
     if (max === min) return 0;
@@ -713,7 +421,6 @@ export default function Page() {
     setImageUrl(canvas.toDataURL("image/png"));
   }, []);
 
-  // --------- Submit logic ----------
   function buildPayload() {
     const sid = sessionId || getOrCreateSessionId();
     return {
@@ -761,7 +468,6 @@ export default function Page() {
         setHasBaselinePosted(true);
       }
     } catch (e) {
-      console.error(e);
     } finally {
       isSavingRef.current = false;
     }
@@ -773,10 +479,9 @@ export default function Page() {
   function saveEmail() {
     if (!email) return;
     setEmailSaved(true);
-    postOnce(); // upsert by session_id updates same row
+    postOnce();
   }
 
-  // Auto-post once when user reaches step >= 1 (optional; safe with mutex)
   useEffect(() => {
     if (sessionId && !hasBaselinePosted && step >= 1 && !isSavingRef.current) {
       postOnce();
@@ -818,8 +523,6 @@ export default function Page() {
             <div>
               <label className="text-sm">City name (optional)</label>
               <StickyTextInput
-                id="city-input"
-                aria-label="City name"
                 defaultValue={cityName}
                 onValue={setCityName}
                 className="w-full mt-2 rounded-lg border p-2 bg-white"
@@ -861,13 +564,7 @@ export default function Page() {
           </div>
 
           <div className="flex justify-end pt-2">
-            <button
-              onClick={() => {
-                setStep(1);
-                saveBaseline();
-              }}
-              className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600"
-            >
+            <button onClick={() => { setStep(1); saveBaseline(); }} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600">
               Start my month
             </button>
           </div>
@@ -889,21 +586,16 @@ export default function Page() {
           <div>
             <label className="text-sm">Income per month is</label>
             <div className="flex gap-2 mt-2 text-sm">
-              <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                Net (after tax)
-              </button>
-              <button onClick={() => setIsGross(true)} className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                Gross (before tax)
-              </button>
+              <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Net (after tax)</button>
+              <button onClick={() => setIsGross(true)} className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Gross (before tax)</button>
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
               <StickyNumericInput
-                id="income-input"
-                aria-label="Monthly income"
                 defaultValue={takeHomeStr}
                 onValue={(t) => setTakeHomeStr(t)}
                 className="w-full rounded-lg border p-2 bg-white"
+                aria-label="Monthly income"
               />
             </div>
             {takeHomeWeird && <div className="text-[11px] text-amber-600 mt-1">Looks unusually high for monthly. If yearly, divide by 12.</div>}
@@ -915,14 +607,10 @@ export default function Page() {
             <div className="flex items-center gap-2 mt-2">
               <span className="text-zinc-500">{currency}</span>
               <StickyNumericInput
-                id="housing-input"
-                aria-label="Monthly housing"
                 defaultValue={housingStr}
-                onValue={(t) => {
-                  setHousingTouched(true);
-                  setHousingStr(t);
-                }}
+                onValue={(t) => { setHousingTouched(true); setHousingStr(t); }}
                 className="w-full rounded-lg border p-2 bg-white"
+                aria-label="Monthly housing"
               />
             </div>
             <p className="text-xs text-zinc-500 mt-1">
@@ -931,11 +619,7 @@ export default function Page() {
               <button
                 type="button"
                 className="underline"
-                onClick={() => {
-                  const v = Math.round(suggestedHousing(region, household) * rentMul);
-                  setHousingStr(String(v));
-                  setHousingTouched(true);
-                }}
+                onClick={() => { const v = Math.round(suggestedHousing(region, household) * rentMul); setHousingStr(String(v)); setHousingTouched(true); }}
               >
                 Use this
               </button>
@@ -949,27 +633,17 @@ export default function Page() {
           <div>
             <label className="text-sm">Hours you work each week, including commute</label>
             <InputRange min={30} max={80} step={1} value={hoursWeek} onValue={setHoursWeek} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">
-              {hoursWeek} hours / week → ~{hoursPerMonth} per month
-            </div>
+            <div className="text-xs text-zinc-500 mt-1">{hoursWeek} hours / week → ~{hoursPerMonth} per month</div>
             {hoursWeird && <div className="text-[11px] text-amber-600 mt-1">Outside usual range — continue if intentional.</div>}
           </div>
 
           <div>
             <label className="text-sm">Getting to work</label>
             <div className="flex gap-2 flex-wrap mt-2">
-              <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                Public transport
-              </button>
-              <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                Drive / taxi
-              </button>
-              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                Walk / Bike
-              </button>
-              <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                Remote / no commute
-              </button>
+              <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Public transport</button>
+              <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Drive / taxi</button>
+              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
+              <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Remote / no commute</button>
             </div>
             {transportMode === "remote" && (
               <div className="mt-2">
@@ -978,25 +652,14 @@ export default function Page() {
                 <div className="text-[11px] text-zinc-500">Covers heating/electric/internet share.</div>
               </div>
             )}
-            <div className="text-xs text-zinc-500 mt-1">
-              Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
-            </div>
+            <div className="text-xs text-zinc-500 mt-1">Commute est.: <Money value={commuteMonthly} currency={currency} /> / month</div>
           </div>
 
           <div>
             <label className="text-sm">Home & kids</label>
             <div className="flex gap-2 flex-wrap mt-2">
               {(["solo", "partner", "partnerKids", "singleParent", "share", "family"] as Household[]).map((h) => (
-                <button
-                  key={h}
-                  onClick={() => {
-                    setHousehold(h);
-                    if (h === "partner" || h === "solo" || h === "share" || h === "family") {
-                      setChildrenCount(0);
-                    }
-                  }}
-                  className={`px-3 py-2 rounded-full border text-sm ${household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}
-                >
+                <button key={h} onClick={() => { setHousehold(h); if (h === "partner" || h === "solo" || h === "share" || h === "family") setChildrenCount(0); }} className={`px-3 py-2 rounded-full border text-sm ${household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
                   {h === "solo" ? "Solo" : h === "partner" ? "Partner" : h === "partnerKids" ? "Partner + kids" : h === "singleParent" ? "Single parent" : h === "share" ? "House share" : "Back home"}
                 </button>
               ))}
@@ -1008,8 +671,7 @@ export default function Page() {
                   <div className="flex gap-2 mt-2">
                     {[0, 1, 2, 3].map((n) => (
                       <button key={n} onClick={() => setChildrenCount(n)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                        {n}
-                        {n === 3 ? "+" : ""}
+                        {n}{n === 3 ? "+" : ""}
                       </button>
                     ))}
                   </div>
@@ -1024,9 +686,7 @@ export default function Page() {
                     ))}
                   </div>
                 </div>
-                <div className="text-xs text-zinc-600 col-span-2">
-                  Estimated children-related monthly costs: <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} />
-                </div>
+                <div className="text-xs text-zinc-600 col-span-2">Estimated children-related monthly costs: <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} /></div>
               </div>
             )}
           </div>
@@ -1034,25 +694,19 @@ export default function Page() {
           <div>
             <label className="text-sm">Debt repayments</label>
             <InputRange min={0} max={2000} step={10} value={debtMonthly} onValue={setDebtMonthly} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">
-              <Money value={debtMonthly} currency={currency} /> / month
-            </div>
+            <div className="text-xs text-zinc-500 mt-1"><Money value={debtMonthly} currency={currency} /> / month</div>
           </div>
 
           <div>
             <label className="text-sm">Student loan</label>
             <InputRange min={0} max={300} step={5} value={studentLoan} onValue={setStudentLoan} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">
-              <Money value={studentLoan} currency={currency} /> / month
-            </div>
+            <div className="text-xs text-zinc-500 mt-1"><Money value={studentLoan} currency={currency} /> / month</div>
           </div>
 
           <div>
             <label className="text-sm">Savings / pension rate</label>
             <InputRange min={0} max={20} step={1} value={savingsRate} onValue={setSavingsRate} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">
-              {savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month
-            </div>
+            <div className="text-xs text-zinc-500 mt-1">{savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month</div>
           </div>
 
           {region === "US" && (
@@ -1073,7 +727,6 @@ export default function Page() {
             </div>
           )}
 
-          {/* Driver sliders */}
           {(Object.keys(DRIVER_META) as DriverKey[]).map((key) => {
             const meta = DRIVER_META[key];
             const lim = DRIVER_LIMITS[key];
@@ -1083,49 +736,25 @@ export default function Page() {
             return (
               <div key={key} className={`border rounded-2xl p-4 shadow-sm ${border} ${bg}`}>
                 <div className={`text-sm font-medium flex items-center gap-2 ${titleClr}`}>
-                  <span className="text-lg" aria-hidden>
-                    {meta.emoji}
-                  </span>
+                  <span className="text-lg" aria-hidden>{meta.emoji}</span>
                   {meta.title}
                 </div>
                 <div className="text-xs text-zinc-600 mb-3">{meta.sub}</div>
-                <InputRange
-                  min={lim.min}
-                  max={lim.max}
-                  step={lim.step}
-                  value={drivers[key]}
-                  onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))}
-                  className="w-full"
-                />
+                <InputRange min={lim.min} max={lim.max} step={lim.step} value={drivers[key]} onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))} className="w-full" />
                 <div className="text-xs text-zinc-500 mt-1">
-                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}
-                  {DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}
-                  {lim.min}–{currency}
-                  {lim.max}
+                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}{DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}{lim.min}–{currency}{lim.max}
                 </div>
               </div>
             );
           })}
 
-          {/* Variable support spends */}
           {(Object.keys(SPEND_LIMITS) as SpendKey[]).map((k) => {
             const lim = SPEND_LIMITS[k];
             return (
               <div key={k} className="border rounded-2xl p-4">
                 <div className="text-sm font-medium mb-2">{lim.label}</div>
-                <InputRange
-                  min={lim.min}
-                  max={lim.max}
-                  step={lim.step}
-                  value={spends[k]}
-                  onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))}
-                  className="w-full"
-                />
-                <div className="text-xs text-zinc-500 mt-1">
-                  Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}
-                  {lim.min}–{currency}
-                  {lim.max})
-                </div>
+                <InputRange min={lim.min} max={lim.max} step={lim.step} value={spends[k]} onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))} className="w-full" />
+                <div className="text-xs text-zinc-500 mt-1">Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}{lim.min}–{currency}{lim.max})</div>
                 {k === "pet" && <div className="text-[11px] text-zinc-500">Exclude fashion/grooming; include vet, insurance, daycare/boarding, horses.</div>}
                 {k === "health" && <div className="text-[11px] text-zinc-500">Exclude insurance premiums; include meds, dental, vision, therapy not covered.</div>}
               </div>
@@ -1133,15 +762,10 @@ export default function Page() {
           })}
         </div>
 
-        {/* Bottom nav */}
         <div className="flex flex-wrap justify-between items-center gap-2 mt-6">
-          <button onClick={back} className="px-3 py-2 rounded-lg border">
-            Back
-          </button>
+          <button onClick={back} className="px-3 py-2 rounded-lg border">Back</button>
           <div className="flex gap-2">
-            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">
-              Continue
-            </button>
+            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
           </div>
         </div>
       </CardBody>
@@ -1172,9 +796,7 @@ export default function Page() {
             />
             <button
               onClick={saveEmail}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition ${emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"}`}
             >
               {emailSaved ? (abVariant === "A" ? "Email saved" : "Saved") : abVariant === "A" ? "Email me the 1-page plan" : "Unlock my plan"}
             </button>
@@ -1184,23 +806,19 @@ export default function Page() {
 
         <div className="mt-5 grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            {/* LOCKABLE REPORT CARD */}
             <div className="relative">
               <div ref={shareRef} className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}>
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
                 <div className="text-3xl font-bold mt-1">
-                  {currency}
-                  {Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
+                  {currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
                 <div className="text-lg mt-1">
-                  That's {currency}
-                  {baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.
+                  That's {currency}{baselineFreedom.toFixed(2)} per hour of freedom<span className="align-super text-xs text-zinc-400">*</span>.
                 </div>
                 <div className="text-[11px] text-zinc-500 mt-1 italic">*Calculated as net discretionary pay per actual hour of life traded.</div>
                 {netMonthly > 0 && (
                   <div className="text-3xl font-bold mt-1">
-                    Out of every {currency}1 you earn, {currency}
-                    {(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.
+                    Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.
                   </div>
                 )}
 
@@ -1221,7 +839,6 @@ export default function Page() {
                 <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
               </div>
 
-              {/* Overlay lock prompt */}
               {!emailSaved && (
                 <div className="absolute inset-0 grid place-items-center">
                   <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4 text-white">
@@ -1230,9 +847,7 @@ export default function Page() {
                     <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
                     <div className="flex flex-col sm:flex-row gap-2 mt-3">
                       <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
-                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">
-                        Unlock
-                      </button>
+                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
                     </div>
                     <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
                   </div>
@@ -1267,30 +882,15 @@ export default function Page() {
                 <div className="text-sm font-medium">Challenge mode</div>
                 <div className="mt-2 space-y-3 text-sm">
                   <div>
-                    <div className="flex justify-between">
-                      <span>Remote days / week</span>
-                      <span>{simRemoteDays}</span>
-                    </div>
+                    <div className="flex justify-between"><span>Remote days / week</span><span>{simRemoteDays}</span></div>
                     <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
                   </div>
                   <div>
-                    <div className="flex justify-between">
-                      <span>Rent change (monthly)</span>
-                      <span>
-                        {currency}
-                        {simRentDelta}
-                      </span>
-                    </div>
+                    <div className="flex justify-between"><span>Rent change (monthly)</span><span>{currency}{simRentDelta}</span></div>
                     <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
                   </div>
                   <div>
-                    <div className="flex justify-between">
-                      <span>Income change (monthly)</span>
-                      <span>
-                        {currency}
-                        {simIncomeDelta}
-                      </span>
-                    </div>
+                    <div className="flex justify-between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
                     <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
                   </div>
                 </div>
@@ -1306,8 +906,7 @@ export default function Page() {
               <CardBody>
                 <div className="text-sm">Your chosen month (with your commute & drivers)</div>
                 <div className="text-2xl font-semibold mt-1">
-                  Kept: <Money value={leftover} currency={currency} /> ({currency}
-                  {effectivePerHour.toFixed(2)}/hr)
+                  Kept: <Money value={leftover} currency={currency} /> ({currency}{effectivePerHour.toFixed(2)}/hr)
                 </div>
                 <div className="text-xs text-zinc-500 mt-2">
                   Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
@@ -1319,21 +918,15 @@ export default function Page() {
             <Card>
               <CardBody>
                 <div className="text-sm">Commute estimate</div>
-                <div className="text-2xl font-semibold mt-1">
-                  <Money value={commuteMonthly} currency={currency} /> / month
-                </div>
-                <div className="text-xs text-zinc-500 mt-2">
-                  Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.
-                </div>
+                <div className="text-2xl font-semibold mt-1"><Money value={commuteMonthly} currency={currency} /> / month</div>
+                <div className="text-xs text-zinc-500 mt-2">Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.</div>
               </CardBody>
             </Card>
 
             <Card>
               <CardBody>
                 <div className="text-sm">Maintenance totals</div>
-                <div className="text-xs text-zinc-500 mt-1">
-                  Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} />
-                </div>
+                <div className="text-xs text-zinc-500 mt-1">Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} /></div>
               </CardBody>
             </Card>
 
@@ -1341,9 +934,7 @@ export default function Page() {
               <Card>
                 <CardBody>
                   <div className="text-sm">Healthcare gap</div>
-                  <div className="text-2xl font-semibold mt-1">
-                    <Money value={healthcareMonthly} currency={currency} /> / month
-                  </div>
+                  <div className="text-2xl font-semibold mt-1"><Money value={healthcareMonthly} currency={currency} /> / month</div>
                 </CardBody>
               </Card>
             )}
@@ -1352,17 +943,13 @@ export default function Page() {
               <Card>
                 <CardBody>
                   <div className="text-sm">Savings / pension</div>
-                  <div className="text-2xl font-semibold mt-1">
-                    <Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)
-                  </div>
+                  <div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)</div>
                 </CardBody>
               </Card>
             )}
 
             <div className="flex gap-2">
-              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">
-                Create share image
-              </button>
+              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
             </div>
           </div>
         </div>
@@ -1370,12 +957,8 @@ export default function Page() {
     </Card>
   );
 
-  // ---------- Render ----------
   return (
-    <div
-      className="min-h-screen text-zinc-900 py-10
-      bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]"
-    >
+    <div className="min-h-screen text-zinc-900 py-10 bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]">
       <div className="max-w-5xl mx-auto px-4">
         <AnimatePresence mode="wait">
           <motion.div key={step} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
@@ -1389,20 +972,20 @@ export default function Page() {
   );
 }
 
-/* ---------- Session helpers (no WebCrypto) ---------- */
+/* ---------- Session helpers ---------- */
 let __sidCounter = 0;
 function simpleId() {
   return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
 }
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
-  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  const m = document.cookie.match(new RegExp(\`(?:^|; )\${name}=([^;]*)\`));
   return m ? decodeURIComponent(m[1]) : "";
 }
 function setCookie(name: string, value: string, days = 365) {
   if (typeof document === "undefined") return;
   const maxAge = days * 24 * 60 * 60;
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
+  document.cookie = \`\${name}=\${encodeURIComponent(value)}; path=/; max-age=\${maxAge}\`;
 }
 function getOrCreateSessionId(): string {
   try {
@@ -1411,7 +994,7 @@ function getOrCreateSessionId(): string {
     const existing = fromCookie || fromLS;
     if (existing) {
       if (!fromCookie) setCookie("rcs_sid", existing);
-      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
+      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rccs_session_id", existing);
       return existing;
     }
     const id = simpleId();
@@ -1421,11 +1004,43 @@ function getOrCreateSessionId(): string {
   } catch {
     const id = "sid_" + Math.random().toString(36).slice(2);
     setCookie("rcs_sid", id);
-    try {
-      if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
-    } catch {}
+    try { if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id); } catch {}
     return id;
   }
+}
+
+// ---------- Tiny sticky inputs ----------
+function StickyTextInput(props: { defaultValue: string; onValue: (t: string) => void; className?: string; placeholder?: string; "aria-label"?: string; }) {
+  const { defaultValue, onValue, ...rest } = props;
+  const ref = React.useRef<HTMLInputElement>(null);
+  const lastExternal = React.useRef(defaultValue);
+  useEffect(() => { if (ref.current && lastExternal.current !== defaultValue) { ref.current.value = defaultValue; lastExternal.current = defaultValue; } }, [defaultValue]);
+  return <input ref={ref} type="text" autoComplete="off" spellCheck={false} defaultValue={defaultValue} onInput={(e)=>onValue((e.target as HTMLInputElement).value)} {...rest} />;
+}
+function StickyNumericInput(props: { defaultValue: string; onValue: (t: string) => void; className?: string; "aria-label"?: string; }) {
+  const { defaultValue, onValue, ...rest } = props;
+  const ref = React.useRef<HTMLInputElement>(null);
+  const lastExternal = React.useRef(defaultValue);
+  useEffect(() => { if (ref.current && lastExternal.current !== defaultValue) { ref.current.value = defaultValue; lastExternal.current = defaultValue; } }, [defaultValue]);
+  const normalize = (v: string) => {
+    if (v.trim() === "" || v === "-") return "0";
+    const n = Number(v.replace(/[, ]/g, ""));
+    return Number.isFinite(n) ? String(n) : "0";
+  };
+  return (
+    <input
+      ref={ref}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      spellCheck={false}
+      defaultValue={defaultValue}
+      onInput={(e)=>onValue((e.target as HTMLInputElement).value)}
+      onBlur={() => { const el = ref.current; if (!el) return; const pos = el.selectionStart ?? el.value.length; const norm = normalize(el.value); el.value = norm; onValue(norm); try{ el.setSelectionRange(pos,pos);}catch{} }}
+      {...rest}
+    />
+  );
 }
 
 // ---------- Self-tests (optional) ----------
