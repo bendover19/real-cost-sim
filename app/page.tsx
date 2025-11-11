@@ -6,9 +6,8 @@ import html2canvas from "html2canvas";
 
 /**
  * Real Cost Simulator — page.tsx
- * - Keeps sliders exactly as-is
- * - Fixes text inputs (city, income, housing) losing focus due to third-party focus grabs
- *   via a global focus guard (does NOT alter slider behaviour).
+ * Aggressive focus lock for text inputs to stop third-party scripts stealing focus.
+ * Sliders are untouched.
  */
 
 const INGEST_PATH = "/api/ingest";
@@ -192,29 +191,32 @@ function toNumberSafe(v: string): number {
 }
 
 /* ----------------------------------------------------------------
- * GLOBAL FOCUS GUARD
- * Re-asserts focus to the last text-like input if a known CMP/ad
- * element steals it. Does not touch sliders.
+ * AGGRESSIVE GLOBAL FOCUS LOCK (for text inputs only)
+ * Re-asserts focus to the active text input while typing if a CMP/ads
+ * element steals it. Sliders/range inputs are not touched.
  * ---------------------------------------------------------------- */
-function installFocusGuard() {
+function installAggressiveInputFocusLock() {
   let lastTypingInput: HTMLInputElement | null = null;
+  let watchdog: number | null = null;
+  let typing = false;
 
   const isTextLike = (el: Element | null): el is HTMLInputElement => {
     if (!el) return false;
     if (!(el instanceof HTMLInputElement)) return false;
     const t = (el.type || "text").toLowerCase();
+    // exclude range to avoid affecting sliders
+    if (t === "range") return false;
     return ["text", "search", "email", "tel", "url", "number", "password"].includes(t);
   };
 
-  const isKnownCMPVictim = (el: Element | null): boolean => {
-    if (!el) return true; // focus to "nowhere"
+  const isKnownCMP = (el: Element | null): boolean => {
+    if (!el) return true;
     if (el instanceof HTMLIFrameElement) {
       const name = (el.getAttribute("name") || "").toLowerCase();
       const src = (el.getAttribute("src") || "").toLowerCase();
-      if (name === "googlefcPresent".toLowerCase()) return true;
+      if (name === "googlefcPresent") return true;
       if (src.includes("fundingchoices") || src.includes("google.com")) return true;
     }
-    const any = el as HTMLElement;
     const badSelectors = [
       'iframe[name="googlefcPresent"]',
       'iframe[src*="fundingchoices"]',
@@ -223,10 +225,10 @@ function installFocusGuard() {
       '[data-fc-consent]',
     ].join(",");
     try {
-      if (any.matches?.(badSelectors)) return true;
+      if ((el as HTMLElement).matches?.(badSelectors)) return true;
     } catch {}
-    // also check ancestors
-    let p: HTMLElement | null = any;
+    // ascend
+    let p: HTMLElement | null = (el as HTMLElement) ?? null;
     while (p) {
       try {
         if (p.matches?.(badSelectors)) return true;
@@ -236,8 +238,8 @@ function installFocusGuard() {
     return false;
   };
 
-  // Mutation observer: de-fang the FC present iframe
-  const tameFCIframes = (root: ParentNode = document) => {
+  // Tame FC iframes so they can't be tabbed/clicked
+  const tameCMP = (root: ParentNode = document) => {
     const frames = (root as Document | HTMLElement).querySelectorAll?.('iframe[name="googlefcPresent"], iframe[src*="fundingchoices"]');
     frames?.forEach((f) => {
       if (f instanceof HTMLIFrameElement) {
@@ -245,70 +247,110 @@ function installFocusGuard() {
         f.setAttribute("aria-hidden", "true");
         try {
           (f.style as any).pointerEvents = "none";
+          (f.style as any).opacity = "0";
+          (f.style as any).width = "0";
+          (f.style as any).height = "0";
         } catch {}
       }
     });
   };
 
+  tameCMP(document);
   const mo = new MutationObserver((muts) => {
     muts.forEach((m) => {
       m.addedNodes.forEach((n) => {
-        if (n instanceof HTMLIFrameElement) tameFCIframes(document);
-        if (n instanceof HTMLElement) tameFCIframes(n);
+        if (n instanceof HTMLElement || n instanceof DocumentFragment) tameCMP(n as ParentNode);
       });
     });
   });
-
-  // Initial pass
-  tameFCIframes(document);
   mo.observe(document.documentElement, { childList: true, subtree: true });
 
-  // Track the last input we were typing in
-  const onFocusIn = (e: FocusEvent) => {
-    const t = e.target as Element | null;
-    if (isTextLike(t)) lastTypingInput = t;
-  };
-
-  // If that input blurs and the new focused element looks like a CMP,
-  // immediately restore focus + caret position.
-  const onBlurCapture = (e: FocusEvent) => {
-    const t = e.target as Element | null;
-    if (!t || t !== lastTypingInput) return;
-    // defer to allow activeElement to update
-    setTimeout(() => {
+  const startWatchdog = () => {
+    if (watchdog != null) return;
+    watchdog = window.setInterval(() => {
+      if (!typing || !lastTypingInput) return;
       const ae = document.activeElement as Element | null;
-      if (isKnownCMPVictim(ae) && lastTypingInput) {
+      if (ae === lastTypingInput) return;
+      // If focus moved to a non-text element or a known CMP, yank it back
+      if (!isTextLike(ae) || isKnownCMP(ae)) {
         const pos = lastTypingInput.selectionStart ?? lastTypingInput.value.length;
         lastTypingInput.focus({ preventScroll: true });
         try {
           lastTypingInput.setSelectionRange(pos, pos);
         } catch {}
       }
-    }, 0);
+    }, 50);
+  };
+
+  const stopWatchdogSoon = () => {
+    // small grace to cover quick steals after blur
+    window.setTimeout(() => {
+      typing = false;
+      if (watchdog != null) {
+        window.clearInterval(watchdog);
+        watchdog = null;
+      }
+    }, 120);
+  };
+
+  const onFocusIn = (e: Event) => {
+    const t = e.target as Element | null;
+    if (isTextLike(t)) {
+      lastTypingInput = t;
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    const t = e.target as Element | null;
+    if (!isTextLike(t)) return;
+    lastTypingInput = t;
+    typing = true;
+    startWatchdog();
+  };
+
+  const onInput = (e: Event) => {
+    const t = e.target as Element | null;
+    if (!isTextLike(t)) return;
+    lastTypingInput = t;
+    typing = true;
+    startWatchdog();
+  };
+
+  const onBlur = (e: FocusEvent) => {
+    const t = e.target as Element | null;
+    if (t && t === lastTypingInput) {
+      // if we blurred to CMP/nowhere, watchdog will snap us back;
+      // otherwise stop shortly after legitimate blur
+      const ae = document.activeElement as Element | null;
+      if (!isTextLike(ae) || isKnownCMP(ae)) {
+        typing = true; // keep watchdog alive to refocus immediately
+        startWatchdog();
+      } else {
+        stopWatchdogSoon();
+      }
+    }
   };
 
   window.addEventListener("focusin", onFocusIn, true);
-  window.addEventListener("blur", onBlurCapture, true);
+  window.addEventListener("keydown", onKeyDown, true);
+  window.addEventListener("input", onInput, true);
+  window.addEventListener("blur", onBlur, true);
 
   return () => {
     window.removeEventListener("focusin", onFocusIn, true);
-    window.removeEventListener("blur", onBlurCapture, true);
+    window.removeEventListener("keydown", onKeyDown, true);
+    window.removeEventListener("input", onInput, true);
+    window.removeEventListener("blur", onBlur, true);
     mo.disconnect();
+    if (watchdog != null) window.clearInterval(watchdog);
   };
 }
 
 /* ----------------------------------------------------------------
- * Sticky Inputs (focus-friendly). These don’t fight focus themselves;
- * the global guard above handles hostile steals.
+ * Sticky inputs that feel uncontrolled (don’t fight focus themselves).
+ * The global lock above handles hostile focus steals.
  * ---------------------------------------------------------------- */
-function StickyTextInput({
-  defaultValue,
-  onValue,
-  className,
-  id,
-  placeholder,
-  "aria-label": ariaLabel,
-}: {
+function StickyTextInput(props: {
   defaultValue: string;
   onValue: (text: string) => void;
   className?: string;
@@ -316,6 +358,7 @@ function StickyTextInput({
   placeholder?: string;
   "aria-label"?: string;
 }) {
+  const { defaultValue, onValue, ...rest } = props;
   const ref = React.useRef<HTMLInputElement>(null);
   const lastExternal = React.useRef(defaultValue);
 
@@ -329,32 +372,24 @@ function StickyTextInput({
   return (
     <input
       ref={ref}
-      id={id}
-      aria-label={ariaLabel}
       type="text"
       autoComplete="off"
       spellCheck={false}
       defaultValue={defaultValue}
-      placeholder={placeholder}
-      className={className}
       onInput={(e) => onValue((e.target as HTMLInputElement).value)}
+      {...rest}
     />
   );
 }
 
-function StickyNumericInput({
-  defaultValue,
-  onValue,
-  className,
-  id,
-  "aria-label": ariaLabel,
-}: {
+function StickyNumericInput(props: {
   defaultValue: string;
   onValue: (text: string) => void;
   className?: string;
   id?: string;
   "aria-label"?: string;
 }) {
+  const { defaultValue, onValue, ...rest } = props;
   const ref = React.useRef<HTMLInputElement>(null);
   const lastExternal = React.useRef(defaultValue);
 
@@ -374,23 +409,23 @@ function StickyNumericInput({
   return (
     <input
       ref={ref}
-      id={id}
-      aria-label={ariaLabel}
       type="text"
       inputMode="numeric"
       pattern="[0-9]*"
       autoComplete="off"
       spellCheck={false}
       defaultValue={defaultValue}
-      className={className}
       onInput={(e) => onValue((e.target as HTMLInputElement).value)}
       onBlur={() => {
         const el = ref.current;
         if (!el) return;
+        const pos = el.selectionStart ?? el.value.length;
         const norm = normalize(el.value);
         el.value = norm;
         onValue(norm);
+        try { el.setSelectionRange(pos, pos); } catch {}
       }}
+      {...rest}
     />
   );
 }
@@ -472,9 +507,9 @@ function BarChart({
 
 // ---------- Page ----------
 export default function Page() {
-  // Install focus guard once on mount
+  // Install aggressive input focus lock once on mount
   useEffect(() => {
-    const cleanup = installFocusGuard();
+    const cleanup = installAggressiveInputFocusLock();
     return cleanup;
   }, []);
 
@@ -533,11 +568,11 @@ export default function Page() {
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
 
-  // We keep user-typed text in state (for math) BUT inputs are simple (uncontrolled feeling).
+  // Keep user-typed text in strings; inputs feel uncontrolled
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
 
-  // Derived numeric values used everywhere else
+  // Derived numeric values
   const takeHome = useMemo(() => toNumberSafe(takeHomeStr), [takeHomeStr]);
   const housing = useMemo(() => toNumberSafe(housingStr), [housingStr]);
 
@@ -571,7 +606,7 @@ export default function Page() {
   const shareRef = React.useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // --- Challenge mode (what-if sliders) ---
+  // --- Challenge mode ---
   const [simRemoteDays, setSimRemoteDays] = useState<number>(0); // 0–5
   const [simRentDelta, setSimRentDelta] = useState<number>(0); // monthly +/- to housing
   const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0); // monthly +/- to income
@@ -1354,7 +1389,7 @@ export default function Page() {
   );
 }
 
-// ---------- Session helpers (no WebCrypto) ----------
+/* ---------- Session helpers (no WebCrypto) ---------- */
 let __sidCounter = 0;
 function simpleId() {
   return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
