@@ -1,7 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react"; // ✅ correct import for App Router
 
 export const metadata: Metadata = {
   title: "Real Cost Simulator",
@@ -46,7 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
+
       <body className="min-h-screen flex flex-col">
+        {/* Main content */}
         <main className="flex-grow">{children}</main>
 
         {/* Footer */}
@@ -58,6 +60,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
           </p>
         </footer>
+
+        {/* ✅ Vercel Analytics */}
+        <Analytics />
       </body>
     </html>
   );
