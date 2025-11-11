@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
+
+/* ============================================================
+   Real Cost Simulator — page.tsx
+   - Sliders unchanged
+   - Text inputs are "sticky" (uncontrolled) so focus never jumps
+   - Sections no longer un/mount per step (no Framer Motion)
+   ============================================================ */
 
 const INGEST_PATH = "/api/ingest";
 
 /** ----------------------------------------------------------------
- * Smooth, mobile-friendly range input (unchanged)
+ * Smooth, mobile-friendly range input (UNCHANGED)
  * ---------------------------------------------------------------- */
 const InputRange: React.FC<
   Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "onInput"> & {
@@ -96,6 +102,7 @@ const COMMUTE_CTX: Record<CommuteContext, { label: string; commuteMul: number }>
   carDependent: { label: "Car-dependent city", commuteMul: 1.3 },
 };
 
+// Typical monthly amounts for driver categories (anchors for defaults)
 const DRIVER_TYPICAL: Record<DriverKey, number> = {
   belonging: 140,
   identity: 110,
@@ -106,6 +113,7 @@ const DRIVER_TYPICAL: Record<DriverKey, number> = {
   moneyPressure: 25,
 };
 
+// UI meta for drivers
 const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string; color: string }> = {
   belonging: { emoji: "🫶", title: "Belonging", sub: "Not being the ghost at work or with friends", color: "rose" },
   identity: { emoji: "👔", title: "Identity", sub: "Looking like you belong where you work", color: "violet" },
@@ -116,6 +124,7 @@ const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string
   moneyPressure: { emoji: "💸", title: "Money pressure", sub: "BNPL/overdraft to smooth the month", color: "orange" },
 };
 
+// Wide slider limits per driver
 const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number }> = {
   belonging: { min: 0, max: 800, step: 5 },
   identity: { min: 0, max: 800, step: 5 },
@@ -126,6 +135,7 @@ const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number 
   moneyPressure: { min: 0, max: 300, step: 5 },
 };
 
+// Slider limits for variable spends
 const SPEND_LIMITS: Record<SpendKey, { label: string; min: number; max: number; step: number }> = {
   pet: { label: "🐾 Pet costs (food, insurance, sitter/boarding, horse, etc.)", min: 0, max: 2000, step: 10 },
   therapy: { label: "🧠 Therapy / coaching / counselling", min: 0, max: 2000, step: 10 },
@@ -305,25 +315,29 @@ export default function Page() {
   const [debtMonthly, setDebtMonthly] = useState<number>(150);
   const [studentLoan, setStudentLoan] = useState<number>(0);
 
+  // Drivers & spends
   const [drivers, setDrivers] = useState<Record<DriverKey, number>>({ ...DRIVER_TYPICAL });
   const [spends, setSpends] = useState<Record<SpendKey, number>>({ pet: 0, therapy: 0, supportOthers: 0, health: 0 });
 
+  // Healthcare (US)
   const [usHealthPlan, setUsHealthPlan] = useState<HealthPlanUS | null>(null);
   const [usHealthcareOverride, setUsHealthcareOverride] = useState<number>(0);
 
+  // Savings
   const [savingsRate, setSavingsRate] = useState<number>(8);
 
+  // Email/share
   const [email, setEmail] = useState<string>("");
   const [emailSaved, setEmailSaved] = useState<boolean>(false);
   const shareRef = React.useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // Challenge mode
+  // --- Challenge mode (what-if sliders) ---
   const [simRemoteDays, setSimRemoteDays] = useState<number>(0);
   const [simRentDelta, setSimRentDelta] = useState<number>(0);
   const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0);
 
-  // Derived calcs
+  // Derived
   const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
   const urb = URBANICITY[urbanicity];
   const ctx = COMMUTE_CTX[commuteCtx];
@@ -374,6 +388,7 @@ export default function Page() {
   }, [leftover, hoursPerMonth]);
   const maintenancePct = useMemo(() => Math.max(0, Math.round((maintenanceSum / Math.max(1, netMonthly)) * 100)), [maintenanceSum, netMonthly]);
 
+  // Baseline (PT + Typical drivers)
   const baselineCommute = useMemo(() => Math.round(regionData.commutePT * commuteMul), [regionData, commuteMul]);
   const typicalDriversSum = useMemo(() => (Object.keys(DRIVER_TYPICAL) as DriverKey[]).reduce((s, k) => s + DRIVER_TYPICAL[k], 0), []);
   const baselineMaintenance = useMemo(() => typicalDriversSum + variableSum + billsUtilities, [typicalDriversSum, variableSum, billsUtilities]);
@@ -386,6 +401,7 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [baselineLeftover, hoursPerMonth]);
 
+  // --- Challenge-mode derived values ---
   const simCommute = useMemo(() => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))), [baselineCommute, simRemoteDays]);
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
@@ -398,6 +414,7 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [simLeftover, hoursPerMonth]);
 
+  // Life Efficiency Score
   function norm(x: number, min: number, max: number) {
     if (!isFinite(x)) return 0;
     if (max === min) return 0;
@@ -421,6 +438,7 @@ export default function Page() {
     setImageUrl(canvas.toDataURL("image/png"));
   }, []);
 
+  // --------- Submit logic ----------
   function buildPayload() {
     const sid = sessionId || getOrCreateSessionId();
     return {
@@ -468,6 +486,7 @@ export default function Page() {
         setHasBaselinePosted(true);
       }
     } catch (e) {
+      // swallow
     } finally {
       isSavingRef.current = false;
     }
@@ -479,9 +498,10 @@ export default function Page() {
   function saveEmail() {
     if (!email) return;
     setEmailSaved(true);
-    postOnce();
+    postOnce(); // upsert by session_id updates same row
   }
 
+  // Auto-post once when user reaches step >= 1 (optional; safe with mutex)
   useEffect(() => {
     if (sessionId && !hasBaselinePosted && step >= 1 && !isSavingRef.current) {
       postOnce();
@@ -495,7 +515,7 @@ export default function Page() {
   const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
   // ---------- Sections ----------
-  const StartSection = () => (
+  const StartSection = (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -575,7 +595,7 @@ export default function Page() {
     </Card>
   );
 
-  const CoreInputs = () => (
+  const CoreInputs = (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -648,7 +668,7 @@ export default function Page() {
             <div className="flex gap-2 flex-wrap mt-2">
               <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Public transport</button>
               <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Drive / taxi</button>
-              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded_full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
+              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
               <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Remote / no commute</button>
             </div>
             {transportMode === "remote" && (
@@ -778,7 +798,7 @@ export default function Page() {
     </Card>
   );
 
-  const RevealSection = () => (
+  const RevealSection = (
     <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -843,223 +863,4 @@ export default function Page() {
                   />
                 </div>
                 <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
-              </div>
-
-              {!emailSaved && (
-                <div className="absolute inset-0 grid place-items-center">
-                  <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4 text-white">
-                    <div className="text-3xl">🔒</div>
-                    <div className="mt-1 font-semibold">Unlock your personalised report</div>
-                    <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                      <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
-                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
-                    </div>
-                    <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {imageUrl && (
-              <div className="space-y-2">
-                <div className="text-sm text-zinc-600">Share image ready — right click to save, or long-press on mobile.</div>
-                <img src={imageUrl} alt="share" className="w-full rounded-lg border" />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-5">
-            <Card>
-              <CardBody>
-                <div className="text-sm font-medium">Life Efficiency Score</div>
-                <div className="flex items-end justify-between mt-1">
-                  <div className="text-3xl font-semibold">{efficiencyScore}/100</div>
-                </div>
-                <div className="mt-2 h-2 w-full rounded bg-zinc-200 overflow-hidden">
-                  <div className="h-2 bg-emerald-500" style={{ width: `${efficiencyScore}%` }} />
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-2">Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.</div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody>
-                <div className="text-sm font-medium">Challenge mode</div>
-                <div className="mt-2 space-y-3 text-sm">
-                  <div>
-                    <div className="flex justify-between"><span>Remote days / week</span><span>{simRemoteDays}</span></div>
-                    <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between"><span>Rent change (monthly)</span><span>{currency}{simRentDelta}</span></div>
-                    <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
-                  </div>
-                  <div>
-                    <div className="flex justify_between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
-                    <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-zinc-500">
-                  Simulated: <span className="font-semibold">{currency}{Math.max(0, simLeftover).toLocaleString()}</span> ({currency}{simFreedom.toFixed(2)}/hr)
-                </div>
-                <div className="text-xs text-zinc-500">Δ vs your baseline: {currency}{(simLeftover - baselineLeftover).toLocaleString()}</div>
-                {!emailSaved && <div className="text-[11px] text-zinc-500 mt-2">Email your optimised plan & settings.</div>}
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody>
-                <div className="text-sm">Your chosen month (with your commute & drivers)</div>
-                <div className="text-2xl font-semibold mt-1">
-                  Kept: <Money value={leftover} currency={currency} /> ({currency}{effectivePerHour.toFixed(2)}/hr)
-                </div>
-                <div className="text-xs text-zinc-500 mt-2">
-                  Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
-                  Kids: <Money value={dependentsMonthly} currency={currency} />
-                </div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody>
-                <div className="text-sm">Commute estimate</div>
-                <div className="text-2xl font-semibold mt-1"><Money value={commuteMonthly} currency={currency} /> / month</div>
-                <div className="text-xs text-zinc-500 mt-2">Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.</div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody>
-                <div className="text-sm">Maintenance totals</div>
-                <div className="text-xs text-zinc-500 mt-1">Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} /></div>
-              </CardBody>
-            </Card>
-
-            {healthcareMonthly > 0 && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm">Healthcare gap</div>
-                  <div className="text-2xl font-semibold mt-1"><Money value={healthcareMonthly} currency={currency} /> / month</div>
-                </CardBody>
-              </Card>
-            )}
-
-            {(savingsMonthly > 0 || savingsRate > 0) && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm">Savings / pension</div>
-                  <div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)</div>
-                </CardBody>
-              </Card>
-            )}
-
-            <div className="flex gap-2">
-              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
-            </div>
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-
-  return (
-    <div className="min-h-screen text-zinc-900 py-10 bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]">
-      <div className="max-w-5xl mx-auto px-4">
-        <AnimatePresence mode="wait">
-          <motion.div key={step} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-            {step === 0 && <StartSection />}
-            {step === 1 && <CoreInputs />}
-            {step === 2 && <RevealSection />}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- Session helpers (NO template literals) ---------- */
-let __sidCounter = 0;
-function simpleId() {
-  return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
-}
-function getCookie(name: string) {
-  if (typeof document === "undefined") return "";
-  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-  return m ? decodeURIComponent(m[1]) : "";
-}
-function setCookie(name: string, value: string, days = 365) {
-  if (typeof document === "undefined") return;
-  const maxAge = days * 24 * 60 * 60;
-  document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=" + String(maxAge);
-}
-function getOrCreateSessionId(): string {
-  try {
-    const fromCookie = getCookie("rcs_sid");
-    const fromLS = typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
-    const existing = fromCookie || fromLS;
-    if (existing) {
-      if (!fromCookie) setCookie("rcs_sid", existing);
-      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
-      return existing;
-    }
-    const id = simpleId();
-    setCookie("rcs_sid", id);
-    if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
-    return id;
-  } catch {
-    const id = "sid_" + Math.random().toString(36).slice(2);
-    setCookie("rcs_sid", id);
-    try { if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id); } catch {}
-    return id;
-  }
-}
-
-// ---------- Tiny sticky inputs ----------
-function StickyTextInput(props: { defaultValue: string; onValue: (t: string) => void; className?: string; placeholder?: string; "aria-label"?: string; }) {
-  const { defaultValue, onValue, ...rest } = props;
-  const ref = React.useRef<HTMLInputElement>(null);
-  const lastExternal = React.useRef(defaultValue);
-  useEffect(() => { if (ref.current && lastExternal.current !== defaultValue) { ref.current.value = defaultValue; lastExternal.current = defaultValue; } }, [defaultValue]);
-  return <input ref={ref} type="text" autoComplete="off" spellCheck={false} defaultValue={defaultValue} onInput={(e)=>onValue((e.target as HTMLInputElement).value)} {...rest} />;
-}
-function StickyNumericInput(props: { defaultValue: string; onValue: (t: string) => void; className?: string; "aria-label"?: string; }) {
-  const { defaultValue, onValue, ...rest } = props;
-  const ref = React.useRef<HTMLInputElement>(null);
-  const lastExternal = React.useRef(defaultValue);
-  useEffect(() => { if (ref.current && lastExternal.current !== defaultValue) { ref.current.value = defaultValue; lastExternal.current = defaultValue; } }, [defaultValue]);
-  const normalize = (v: string) => {
-    if (v.trim() === "" || v === "-") return "0";
-    const n = Number(v.replace(/[, ]/g, ""));
-    return Number.isFinite(n) ? String(n) : "0";
-    };
-  return (
-    <input
-      ref={ref}
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      autoComplete="off"
-      spellCheck={false}
-      defaultValue={defaultValue}
-      onInput={(e)=>onValue((e.target as HTMLInputElement).value)}
-      onBlur={() => { const el = ref.current; if (!el) return; const pos = el.selectionStart ?? el.value.length; const norm = normalize(el.value); el.value = norm; onValue(norm); try{ el.setSelectionRange(pos,pos);}catch{} }}
-      {...rest}
-    />
-  );
-}
-
-// ---------- Self-tests (optional) ----------
-(function runSelfTests() {
-  console.assert(currencySymbol("UK") === "£", "UK currency £");
-  console.assert(currencySymbol("US") === "$", "US currency $");
-  console.assert(suggestedHousing("UK", "share") === 800, "UK share rent 800");
-  console.assert(suggestedHousing("EU", "solo") > 0, "EU solo rent > 0");
-  const typicalSum = Object.values(DRIVER_TYPICAL).reduce((a, b) => a + b, 0);
-  console.assert(typicalSum === 140 + 110 + 120 + 90 + 120 + 45 + 25, "Driver typical sum matches");
-  console.assert(approximateFromGross("UK", 4000) > 2000, "Gross→Net produces net");
-  console.assert(computeHealthcare("US", "employer", 0) === 200, "US employer");
-  console.assert(computeHealthcare("US", null, 0) === 250, "US default");
-  console.assert(computeSavingsFromRate(2000, 8) === 160, "8% of 2000 is 160");
-  console.assert(childCostPreset("UK", 2, "nursery") > childCostPreset("UK", 1, "school"), "Nursery & more kids cost more");
-})();
+              <
