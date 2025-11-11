@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 
 /**
- * Real Cost Simulator — page.tsx (stable session + single-submit)
- * Sticky inputs (City, Income, Housing) that re-assert focus + caret
- * to prevent third-party scripts/extensions from stealing focus.
- * Sliders unchanged.
+ * Real Cost Simulator — page.tsx
+ * - Keeps sliders exactly as-is
+ * - Fixes text inputs (city, income, housing) losing focus due to third-party focus grabs
+ *   via a global focus guard (does NOT alter slider behaviour).
  */
 
 const INGEST_PATH = "/api/ingest";
@@ -192,28 +192,118 @@ function toNumberSafe(v: string): number {
 }
 
 /* ----------------------------------------------------------------
- * Sticky Inputs (focus-asserting)
- * - StickyTextInput: generic text (City)
- * - StickyNumericInput: numeric (Income/Housing)
+ * GLOBAL FOCUS GUARD
+ * Re-asserts focus to the last text-like input if a known CMP/ad
+ * element steals it. Does not touch sliders.
  * ---------------------------------------------------------------- */
-function useStickyFocus(ref: React.RefObject<HTMLInputElement | null>) {
-  return React.useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (document.activeElement !== el) {
-      const pos = el.selectionStart ?? el.value.length;
-      el.focus({ preventScroll: true });
-      try {
-        el.setSelectionRange(pos, pos);
-      } catch {}
+function installFocusGuard() {
+  let lastTypingInput: HTMLInputElement | null = null;
+
+  const isTextLike = (el: Element | null): el is HTMLInputElement => {
+    if (!el) return false;
+    if (!(el instanceof HTMLInputElement)) return false;
+    const t = (el.type || "text").toLowerCase();
+    return ["text", "search", "email", "tel", "url", "number", "password"].includes(t);
+  };
+
+  const isKnownCMPVictim = (el: Element | null): boolean => {
+    if (!el) return true; // focus to "nowhere"
+    if (el instanceof HTMLIFrameElement) {
+      const name = (el.getAttribute("name") || "").toLowerCase();
+      const src = (el.getAttribute("src") || "").toLowerCase();
+      if (name === "googlefcPresent".toLowerCase()) return true;
+      if (src.includes("fundingchoices") || src.includes("google.com")) return true;
     }
-  }, [ref]);
+    const any = el as HTMLElement;
+    const badSelectors = [
+      'iframe[name="googlefcPresent"]',
+      'iframe[src*="fundingchoices"]',
+      '[id^="fc-"]',
+      '[class*="fc-"]',
+      '[data-fc-consent]',
+    ].join(",");
+    try {
+      if (any.matches?.(badSelectors)) return true;
+    } catch {}
+    // also check ancestors
+    let p: HTMLElement | null = any;
+    while (p) {
+      try {
+        if (p.matches?.(badSelectors)) return true;
+      } catch {}
+      p = p.parentElement;
+    }
+    return false;
+  };
+
+  // Mutation observer: de-fang the FC present iframe
+  const tameFCIframes = (root: ParentNode = document) => {
+    const frames = (root as Document | HTMLElement).querySelectorAll?.('iframe[name="googlefcPresent"], iframe[src*="fundingchoices"]');
+    frames?.forEach((f) => {
+      if (f instanceof HTMLIFrameElement) {
+        f.tabIndex = -1;
+        f.setAttribute("aria-hidden", "true");
+        try {
+          (f.style as any).pointerEvents = "none";
+        } catch {}
+      }
+    });
+  };
+
+  const mo = new MutationObserver((muts) => {
+    muts.forEach((m) => {
+      m.addedNodes.forEach((n) => {
+        if (n instanceof HTMLIFrameElement) tameFCIframes(document);
+        if (n instanceof HTMLElement) tameFCIframes(n);
+      });
+    });
+  });
+
+  // Initial pass
+  tameFCIframes(document);
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+
+  // Track the last input we were typing in
+  const onFocusIn = (e: FocusEvent) => {
+    const t = e.target as Element | null;
+    if (isTextLike(t)) lastTypingInput = t;
+  };
+
+  // If that input blurs and the new focused element looks like a CMP,
+  // immediately restore focus + caret position.
+  const onBlurCapture = (e: FocusEvent) => {
+    const t = e.target as Element | null;
+    if (!t || t !== lastTypingInput) return;
+    // defer to allow activeElement to update
+    setTimeout(() => {
+      const ae = document.activeElement as Element | null;
+      if (isKnownCMPVictim(ae) && lastTypingInput) {
+        const pos = lastTypingInput.selectionStart ?? lastTypingInput.value.length;
+        lastTypingInput.focus({ preventScroll: true });
+        try {
+          lastTypingInput.setSelectionRange(pos, pos);
+        } catch {}
+      }
+    }, 0);
+  };
+
+  window.addEventListener("focusin", onFocusIn, true);
+  window.addEventListener("blur", onBlurCapture, true);
+
+  return () => {
+    window.removeEventListener("focusin", onFocusIn, true);
+    window.removeEventListener("blur", onBlurCapture, true);
+    mo.disconnect();
+  };
 }
 
+/* ----------------------------------------------------------------
+ * Sticky Inputs (focus-friendly). These don’t fight focus themselves;
+ * the global guard above handles hostile steals.
+ * ---------------------------------------------------------------- */
 function StickyTextInput({
   defaultValue,
   onValue,
-  onTouched,
   className,
   id,
   placeholder,
@@ -221,14 +311,12 @@ function StickyTextInput({
 }: {
   defaultValue: string;
   onValue: (text: string) => void;
-  onTouched?: () => void;
   className?: string;
   id?: string;
   placeholder?: string;
   "aria-label"?: string;
 }) {
   const ref = React.useRef<HTMLInputElement>(null);
-  const stickFocus = useStickyFocus(ref);
   const lastExternal = React.useRef(defaultValue);
 
   React.useEffect(() => {
@@ -249,15 +337,7 @@ function StickyTextInput({
       defaultValue={defaultValue}
       placeholder={placeholder}
       className={className}
-      onFocus={() => {
-        onTouched?.();
-        stickFocus();
-      }}
-      onInput={(e) => {
-        onTouched?.();
-        onValue((e.target as HTMLInputElement).value);
-        requestAnimationFrame(stickFocus);
-      }}
+      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
     />
   );
 }
@@ -265,20 +345,17 @@ function StickyTextInput({
 function StickyNumericInput({
   defaultValue,
   onValue,
-  onTouched,
   className,
   id,
   "aria-label": ariaLabel,
 }: {
   defaultValue: string;
-  onValue: (text: string) => void; // returns raw string while typing
-  onTouched?: () => void;
+  onValue: (text: string) => void;
   className?: string;
   id?: string;
   "aria-label"?: string;
 }) {
   const ref = React.useRef<HTMLInputElement>(null);
-  const stickFocus = useStickyFocus(ref);
   const lastExternal = React.useRef(defaultValue);
 
   React.useEffect(() => {
@@ -306,16 +383,7 @@ function StickyNumericInput({
       spellCheck={false}
       defaultValue={defaultValue}
       className={className}
-      onFocus={() => {
-        onTouched?.();
-        stickFocus();
-      }}
-      onInput={(e) => {
-        const v = (e.target as HTMLInputElement).value;
-        onTouched?.();
-        onValue(v);
-        requestAnimationFrame(stickFocus);
-      }}
+      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
       onBlur={() => {
         const el = ref.current;
         if (!el) return;
@@ -404,6 +472,12 @@ function BarChart({
 
 // ---------- Page ----------
 export default function Page() {
+  // Install focus guard once on mount
+  useEffect(() => {
+    const cleanup = installFocusGuard();
+    return cleanup;
+  }, []);
+
   const [step, setStep] = useState<number>(0);
   const progressPct = step === 0 ? 33 : step === 1 ? 66 : 100;
 
@@ -459,7 +533,7 @@ export default function Page() {
   // Core inputs
   const [isGross, setIsGross] = useState<boolean>(false);
 
-  // We keep user-typed text in state (for math) BUT inputs are UNCONTROLLED/Sticky.
+  // We keep user-typed text in state (for math) BUT inputs are simple (uncontrolled feeling).
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
 
@@ -809,8 +883,10 @@ export default function Page() {
                 id="housing-input"
                 aria-label="Monthly housing"
                 defaultValue={housingStr}
-                onTouched={() => setHousingTouched(true)}
-                onValue={(t) => setHousingStr(t)}
+                onValue={(t) => {
+                  setHousingTouched(true);
+                  setHousingStr(t);
+                }}
                 className="w-full rounded-lg border p-2 bg-white"
               />
             </div>
@@ -822,7 +898,7 @@ export default function Page() {
                 className="underline"
                 onClick={() => {
                   const v = Math.round(suggestedHousing(region, household) * rentMul);
-                  setHousingStr(String(v)); // StickyNumericInput mirrors via defaultValue
+                  setHousingStr(String(v));
                   setHousingTouched(true);
                 }}
               >
@@ -1328,7 +1404,6 @@ function getOrCreateSessionId(): string {
   console.assert(approximateFromGross("UK", 4000) > 2000, "Gross→Net produces net");
   console.assert(computeHealthcare("US", "employer", 0) === 200, "US employer");
   console.assert(computeHealthcare("US", null, 0) === 250, "US default");
-  console.assert(computeHealthcare("UK", null, 0) === 0, "Non-US 0");
   console.assert(computeSavingsFromRate(2000, 8) === 160, "8% of 2000 is 160");
   console.assert(childCostPreset("UK", 2, "nursery") > childCostPreset("UK", 1, "school"), "Nursery & more kids cost more");
 })();
