@@ -413,6 +413,13 @@ export default function Page() {
     const per = simLeftover / Math.max(1, hoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [simLeftover, hoursPerMonth]);
+     const simDelta = useMemo(() => simLeftover - baselineLeftover, [
+    simLeftover, baselineLeftover,
+  ]);
+  const simDeltaPerHour = useMemo(() => simFreedom - baselineFreedom, [
+    simFreedom, baselineFreedom,
+  ]);
+
 
   // Life Efficiency Score
   function norm(x: number, min: number, max: number) {
@@ -904,29 +911,68 @@ export default function Page() {
             </Card>
 
             <Card>
-              <CardBody>
-                <div className="text-sm font-medium">Challenge mode</div>
-                <div className="mt-2 space-y-3 text-sm">
-                  <div>
-                    <div className="flex justify-between"><span>Remote days / week</span><span>{simRemoteDays}</span></div>
-                    <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between"><span>Rent change (monthly)</span><span>{currency}{simRentDelta}</span></div>
-                    <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
-                    <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-zinc-500">
-                  Simulated: <span className="font-semibold">{currency}{Math.max(0, simLeftover).toLocaleString()}</span> ({currency}{simFreedom.toFixed(2)}/hr)
-                </div>
-                <div className="text-xs text-zinc-500">Δ vs your baseline: {currency}{(simLeftover - baselineLeftover).toLocaleString()}</div>
-                {!emailSaved && <div className="text-[11px] text-zinc-500 mt-2">Email your optimised plan & settings.</div>}
-              </CardBody>
-            </Card>
+  <CardBody>
+    <div className="text-sm font-medium">Try quick changes</div>
+    <div className="mt-2 space-y-3 text-sm">
+      <div>
+        <div className="flex justify-between">
+          <span>Remote days / week</span>
+          <span>{simRemoteDays}</span>
+        </div>
+        <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
+      </div>
+      <div>
+        <div className="flex justify-between">
+          <span>Rent change (monthly)</span>
+          <span>{currency}{simRentDelta}</span>
+        </div>
+        <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
+      </div>
+      <div>
+        <div className="flex justify-between">
+          <span>Income change (monthly)</span>
+          <span>{currency}{simIncomeDelta}</span>
+        </div>
+        <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
+      </div>
+    </div>
+
+    {/* SUPER SIMPLE READOUT */}
+    <div className="mt-4 rounded-xl border bg-white p-3 text-sm space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-zinc-600">Before (baseline)</span>
+        <span className="font-medium">
+          {currency}{Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}{baselineFreedom.toFixed(2)}/hr
+        </span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-zinc-600">After (with changes)</span>
+        <span className="font-semibold">
+          {currency}{Math.max(0, simLeftover).toLocaleString()} / mo · {currency}{simFreedom.toFixed(2)}/hr
+        </span>
+      </div>
+
+      <div className={`flex items-center justify-between ${simDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+        <span>Difference</span>
+        <span className="font-semibold">
+          {simDelta >= 0 ? "+" : ""}{currency}{simDelta.toLocaleString()} / mo · {simDeltaPerHour >= 0 ? "+" : ""}{currency}{simDeltaPerHour.toFixed(2)}/hr
+        </span>
+      </div>
+
+      <div className="text-xs text-zinc-600 pt-1">
+        Plain English: You’d keep{" "}
+        <span className="font-medium">
+          {simDelta >= 0 ? `${currency}${simDelta.toLocaleString()} more` : `${currency}${Math.abs(simDelta).toLocaleString()} less`}
+        </span>{" "}
+        each month with the sliders set above.
+      </div>
+      <div className="text-[11px] text-zinc-500">
+        (Only the three sliders affect this. All your other inputs stay the same.)
+      </div>
+    </div>
+  </CardBody>
+</Card>
+
 
             <Card>
               <CardBody>
