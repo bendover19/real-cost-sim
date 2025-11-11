@@ -7,7 +7,7 @@ import html2canvas from "html2canvas";
    Real Cost Simulator — page.tsx
    - Sliders unchanged
    - Text inputs are "sticky" (uncontrolled) so focus never jumps
-   - Sections no longer un/mount per step (no Framer Motion)
+   - Sections render once and are hidden/shown (no remounts)
    ============================================================ */
 
 const INGEST_PATH = "/api/ingest";
@@ -485,7 +485,7 @@ export default function Page() {
       } else {
         setHasBaselinePosted(true);
       }
-    } catch (e) {
+    } catch {
       // swallow
     } finally {
       isSavingRef.current = false;
@@ -514,7 +514,7 @@ export default function Page() {
 
   const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
-  // ---------- Sections ----------
+  // ---------- Sections (rendered once) ----------
   const StartSection = (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
@@ -863,4 +863,260 @@ export default function Page() {
                   />
                 </div>
                 <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
-              <
+              </div>
+
+              {!emailSaved && (
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4 text-white">
+                    <div className="text-3xl">🔒</div>
+                    <div className="mt-1 font-semibold">Unlock your personalised report</div>
+                    <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                      <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
+                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
+                    </div>
+                    <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {imageUrl && (
+              <div className="space-y-2">
+                <div className="text-sm text-zinc-600">Share image ready — right click to save, or long-press on mobile.</div>
+                <img src={imageUrl} alt="share" className="w-full rounded-lg border" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-5">
+            <Card>
+              <CardBody>
+                <div className="text-sm font-medium">Life Efficiency Score</div>
+                <div className="flex items-end justify-between mt-1">
+                  <div className="text-3xl font-semibold">{efficiencyScore}/100</div>
+                </div>
+                <div className="mt-2 h-2 w-full rounded bg-zinc-200 overflow-hidden">
+                  <div className="h-2 bg-emerald-500" style={{ width: `${efficiencyScore}%` }} />
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-2">Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.</div>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardBody>
+                <div className="text-sm font-medium">Challenge mode</div>
+                <div className="mt-2 space-y-3 text-sm">
+                  <div>
+                    <div className="flex justify-between"><span>Remote days / week</span><span>{simRemoteDays}</span></div>
+                    <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between"><span>Rent change (monthly)</span><span>{currency}{simRentDelta}</span></div>
+                    <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between"><span>Income change (monthly)</span><span>{currency}{simIncomeDelta}</span></div>
+                    <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
+                  </div>
+                </div>
+                <div className="mt-3 text-xs text-zinc-500">
+                  Simulated: <span className="font-semibold">{currency}{Math.max(0, simLeftover).toLocaleString()}</span> ({currency}{simFreedom.toFixed(2)}/hr)
+                </div>
+                <div className="text-xs text-zinc-500">Δ vs your baseline: {currency}{(simLeftover - baselineLeftover).toLocaleString()}</div>
+                {!emailSaved && <div className="text-[11px] text-zinc-500 mt-2">Email your optimised plan & settings.</div>}
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardBody>
+                <div className="text-sm">Your chosen month (with your commute & drivers)</div>
+                <div className="text-2xl font-semibold mt-1">
+                  Kept: <Money value={leftover} currency={currency} /> ({currency}{effectivePerHour.toFixed(2)}/hr)
+                </div>
+                <div className="text-xs text-zinc-500 mt-2">
+                  Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
+                  Kids: <Money value={dependentsMonthly} currency={currency} />
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardBody>
+                <div className="text-sm">Commute estimate</div>
+                <div className="text-2xl font-semibold mt-1"><Money value={commuteMonthly} currency={currency} /> / month</div>
+                <div className="text-xs text-zinc-500 mt-2">Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.</div>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardBody>
+                <div className="text-sm">Maintenance totals</div>
+                <div className="text-xs text-zinc-500 mt-1">Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} /></div>
+              </CardBody>
+            </Card>
+
+            {healthcareMonthly > 0 && (
+              <Card>
+                <CardBody>
+                  <div className="text-sm">Healthcare gap</div>
+                  <div className="text-2xl font-semibold mt-1"><Money value={healthcareMonthly} currency={currency} /> / month</div>
+                </CardBody>
+              </Card>
+            )}
+
+            {(savingsMonthly > 0 || savingsRate > 0) && (
+              <Card>
+                <CardBody>
+                  <div className="text-sm">Savings / pension</div>
+                  <div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)</div>
+                </CardBody>
+              </Card>
+            )}
+
+            <div className="flex gap-2">
+              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
+            </div>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+
+  // ---------- Render (no remounts) ----------
+  return (
+    <div className="min-h-screen text-zinc-900 py-10 bg-[radial-gradient(ellipse_at_top_left,rgba(125,211,252,0.22),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(244,114,182,0.18),transparent_45%)]">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className={step === 0 ? "" : "hidden"} aria-hidden={step !== 0}>
+          {StartSection}
+        </div>
+        <div className={step === 1 ? "" : "hidden"} aria-hidden={step !== 1}>
+          {CoreInputs}
+        </div>
+        <div className={step === 2 ? "" : "hidden"} aria-hidden={step !== 2}>
+          {RevealSection}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Session helpers ---------- */
+let __sidCounter = 0;
+function simpleId() {
+  return "sid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + (__sidCounter++).toString(36);
+}
+function getCookie(name: string) {
+  if (typeof document === "undefined") return "";
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : "";
+}
+function setCookie(name: string, value: string, days = 365) {
+  if (typeof document === "undefined") return;
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=" + String(maxAge);
+}
+function getOrCreateSessionId(): string {
+  try {
+    const fromCookie = getCookie("rcs_sid");
+    const fromLS = typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
+    const existing = fromCookie || fromLS;
+    if (existing) {
+      if (!fromCookie) setCookie("rcs_sid", existing);
+      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
+      return existing;
+    }
+    const id = simpleId();
+    setCookie("rcs_sid", id);
+    if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
+    return id;
+  } catch {
+    const id = "sid_" + Math.random().toString(36).slice(2);
+    setCookie("rcs_sid", id);
+    try { if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id); } catch {}
+    return id;
+  }
+}
+
+/* ---------- Sticky inputs (uncontrolled with ref sync) ---------- */
+function StickyTextInput(props: {
+  id?: string;
+  "data-probe"?: string;
+  defaultValue: string;
+  onValue: (t: string) => void;
+  className?: string;
+  placeholder?: string;
+  "aria-label"?: string;
+}) {
+  const { defaultValue, onValue, ...rest } = props;
+  const ref = React.useRef<HTMLInputElement>(null);
+  const lastExternal = React.useRef(defaultValue);
+
+  useEffect(() => {
+    if (ref.current && lastExternal.current !== defaultValue) {
+      ref.current.value = defaultValue;
+      lastExternal.current = defaultValue;
+    }
+  }, [defaultValue]);
+
+  return (
+    <input
+      ref={ref}
+      type="text"
+      autoComplete="off"
+      spellCheck={false}
+      defaultValue={defaultValue}
+      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
+      {...rest}
+    />
+  );
+}
+
+function StickyNumericInput(props: {
+  id?: string;
+  "data-probe"?: string;
+  defaultValue: string;
+  onValue: (t: string) => void;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  const { defaultValue, onValue, ...rest } = props;
+  const ref = React.useRef<HTMLInputElement>(null);
+  const lastExternal = React.useRef(defaultValue);
+
+  useEffect(() => {
+    if (ref.current && lastExternal.current !== defaultValue) {
+      ref.current.value = defaultValue;
+      lastExternal.current = defaultValue;
+    }
+  }, [defaultValue]);
+
+  const normalize = (v: string) => {
+    if (v.trim() === "" || v === "-") return "0";
+    const n = Number(v.replace(/[, ]/g, ""));
+    return Number.isFinite(n) ? String(n) : "0";
+  };
+
+  return (
+    <input
+      ref={ref}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      spellCheck={false}
+      defaultValue={defaultValue}
+      onInput={(e) => onValue((e.target as HTMLInputElement).value)}
+      onBlur={() => {
+        const el = ref.current;
+        if (!el) return;
+        const pos = el.selectionStart ?? el.value.length;
+        const norm = normalize(el.value);
+        el.value = norm;
+        onValue(norm);
+        try { el.setSelectionRange(pos, pos); } catch {}
+      }}
+      {...rest}
+    />
+  );
+}
