@@ -118,7 +118,7 @@ const DRIVER_META: Record<DriverKey, { emoji: string; title: string; sub: string
   belonging: { emoji: "🫶", title: "Belonging", sub: "Not being the ghost at work or with friends", color: "rose" },
   identity: { emoji: "👔", title: "Identity", sub: "Looking like you belong where you work", color: "violet" },
   timeTrade: { emoji: "⏱️", title: "Time trade", sub: "When tired, you buy time (delivery, taxis)", color: "amber" },
-  comfort: { emoji: "🌙", title: "Comfort", sub: "Switching off after rough days", color: "sky" },
+  comfort: { emoji: "🌙", title: "Comfort", sub: "Things that make life more pleasant or restorative (home upgrades, wine, spa day)", color: "sky" },
   connection: { emoji: "💘", title: "Connection", sub: "Dating / keeping relationships alive", color: "fuchsia" },
   treats: { emoji: "🎁", title: "Small treats", sub: "Subscriptions and little upgrades", color: "emerald" },
   moneyPressure: { emoji: "💸", title: "Money pressure", sub: "BNPL/overdraft to smooth the month", color: "orange" },
