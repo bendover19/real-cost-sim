@@ -353,6 +353,13 @@ export default function Page() {
     return Math.max(0, base + otherIncome); // UPDATED
   }, [isGross, takeHome, region, otherIncome]);
 
+  // --- Chart toggle: include/exclude Other income in the graph totals ---
+  const [includeOtherIncomeInChart, setIncludeOtherIncomeInChart] = useState<boolean>(true);
+  const chartNet = useMemo(
+    () => (includeOtherIncomeInChart ? netMonthly : Math.max(0, netMonthly - otherIncome)),
+    [includeOtherIncomeInChart, netMonthly, otherIncome]
+  );
+
   useEffect(() => {
     if (!housingTouched) {
       const v = Math.round(suggestedHousing(region, household) * rentMul);
@@ -463,7 +470,8 @@ export default function Page() {
       household,
       take_home: netMonthly,
       housing,
-      commute_mode: transportMode === "remote" ? "remote" : transportMode === "pt" ? "pt" : transportMode === "walk" ? "walk" : "drive",
+      commute_mode:
+        transportMode === "remote" ? "remote" : transportMode === "pt" ? "pt" : transportMode === "walk" ? "walk" : "drive",
       commute_monthly: commuteMonthly,
       hours_week: hoursWeek,
       drivers,
@@ -527,7 +535,8 @@ export default function Page() {
   const housingWeird = housingTouched && housing < 300 && !(["family", "share"] as Household[]).includes(household);
   const hoursWeird = hoursWeek < 30 || hoursWeek > 80;
 
-  const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
+  const badgeLeft =
+    cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
   // ---------- Sections (rendered once) ----------
   const StartSection = (
@@ -537,21 +546,31 @@ export default function Page() {
           <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
         </div>
 
-        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">The Real Cost of Working</h1>
+        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">
+          The Real Cost of Working
+        </h1>
 
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
 
         <div className="mt-6 text-zinc-700 space-y-3 leading-relaxed">
-          <p>Most people never see how much of their paycheck quietly disappears into rent, transport, debt, and time spent commuting. Your payslip ≠ your pay.</p>
           <p>
-            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount of income you actually keep after all the hidden costs of working life.
+            Most people never see how much of their paycheck quietly disappears into rent, transport, debt, and time
+            spent commuting. Your payslip ≠ your pay.
           </p>
-          <p>In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate into more free time and financial breathing room.</p>
+          <p>
+            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount of income
+            you actually keep after all the hidden costs of working life.
+          </p>
+          <p>
+            In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate into more
+            free time and financial breathing room.
+          </p>
         </div>
 
         <div className="space-y-6 mt-6">
           <p className="text-zinc-700">
-            See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of staying employable.
+            See your <span className="font-semibold">hour of freedom</span> after rent, commute, and the real cost of
+            staying employable.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -569,7 +588,11 @@ export default function Page() {
             </div>
             <div>
               <label className="text-sm">Country/Region</label>
-              <select value={region} onChange={(e) => setRegion(e.target.value as RegionId)} className="w-full mt-2 rounded-lg border p-2 bg-white">
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value as RegionId)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
                 {regions.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label}
@@ -605,7 +628,11 @@ export default function Page() {
             </div>
             <div>
               <label className="text-sm">Commute context</label>
-              <select value={commuteCtx} onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)} className="w-full mt-2 rounded-lg border p-2 bg-white">
+              <select
+                value={commuteCtx}
+                onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
                 {Object.entries(COMMUTE_CTX).map(([k, v]) => (
                   <option key={k} value={k}>
                     {v.label}
@@ -617,7 +644,13 @@ export default function Page() {
           </div>
 
           <div className="flex justify-end pt-2">
-            <button onClick={() => { setStep(1); saveBaseline(); }} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600">
+            <button
+              onClick={() => {
+                setStep(1);
+                saveBaseline();
+              }}
+              className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600"
+            >
               Start my month
             </button>
           </div>
@@ -639,8 +672,18 @@ export default function Page() {
           <div>
             <label className="text-sm">Income per month is</label>
             <div className="flex gap-2 mt-2 text-sm">
-              <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Net (after tax)</button>
-              <button onClick={() => setIsGross(true)} className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Gross (before tax)</button>
+              <button
+                onClick={() => setIsGross(false)}
+                className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}
+              >
+                Net (after tax)
+              </button>
+              <button
+                onClick={() => setIsGross(true)}
+                className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}
+              >
+                Gross (before tax)
+              </button>
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
@@ -653,8 +696,14 @@ export default function Page() {
                 aria-label="Monthly income"
               />
             </div>
-            {takeHomeWeird && <div className="text-[11px] text-amber-600 mt-1">Looks unusually high for monthly. If yearly, divide by 12.</div>}
-            <p className="text-xs text-zinc-500 mt-1">If Gross selected, we estimate Net with a quick regional factor.</p>
+            {takeHomeWeird && (
+              <div className="text-[11px] text-amber-600 mt-1">
+                Looks unusually high for monthly. If yearly, divide by 12.
+              </div>
+            )}
+            <p className="text-xs text-zinc-500 mt-1">
+              If Gross selected, we estimate Net with a quick regional factor.
+            </p>
           </div>
 
           {/* NEW: Other income */}
@@ -684,7 +733,10 @@ export default function Page() {
                 defaultValue={housingStr}
                 id="housing-input"
                 data-probe="housing"
-                onValue={(t) => { setHousingTouched(true); setHousingStr(t); }}
+                onValue={(t) => {
+                  setHousingTouched(true);
+                  setHousingStr(t);
+                }}
                 className="w-full rounded-lg border p-2 bg-white"
                 aria-label="Monthly housing"
               />
@@ -695,31 +747,74 @@ export default function Page() {
               <button
                 type="button"
                 className="underline"
-                onClick={() => { const v = Math.round(suggestedHousing(region, household) * rentMul); setHousingStr(String(v)); setHousingTouched(true); }}
+                onClick={() => {
+                  const v = Math.round(suggestedHousing(region, household) * rentMul);
+                  setHousingStr(String(v));
+                  setHousingTouched(true);
+                }}
               >
                 Use this
               </button>
             </p>
-            {housingWeird && <div className="text-[11px] text-amber-600 mt-1">That looks unusually low. Continue if intentional.</div>}
+            {housingWeird && (
+              <div className="text-[11px] text-amber-600 mt-1">That looks unusually low. Continue if intentional.</div>
+            )}
             <label className="mt-2 inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={billsIncluded} onChange={(e) => setBillsIncluded(e.target.checked)} /> Bills included?
+              <input
+                type="checkbox"
+                checked={billsIncluded}
+                onChange={(e) => setBillsIncluded(e.target.checked)}
+              />{" "}
+              Bills included?
             </label>
           </div>
 
           <div>
             <label className="text-sm">Hours you work each week, including commute</label>
             <InputRange min={30} max={80} step={1} value={hoursWeek} onValue={setHoursWeek} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">{hoursWeek} hours / week → ~{hoursPerMonth} per month</div>
-            {hoursWeird && <div className="text-[11px] text-amber-600 mt-1">Outside usual range — continue if intentional.</div>}
+            <div className="text-xs text-zinc-500 mt-1">
+              {hoursWeek} hours / week → ~{hoursPerMonth} per month
+            </div>
+            {hoursWeird && (
+              <div className="text-[11px] text-amber-600 mt-1">Outside usual range — continue if intentional.</div>
+            )}
           </div>
 
           <div>
             <label className="text-sm">Getting to work</label>
             <div className="flex gap-2 flex-wrap mt-2">
-              <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Public transport</button>
-              <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Drive / taxi</button>
-              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
-              <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Remote / no commute</button>
+              <button
+                onClick={() => setTransportMode("pt")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Public transport
+              </button>
+              <button
+                onClick={() => setTransportMode("drive")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Drive / taxi
+              </button>
+              <button
+                onClick={() => setTransportMode("walk")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Walk / Bike
+              </button>
+              <button
+                onClick={() => setTransportMode("remote")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Remote / no commute
+              </button>
             </div>
             {transportMode === "remote" && (
               <div className="mt-2">
@@ -728,15 +823,36 @@ export default function Page() {
                 <div className="text-[11px] text-zinc-500">Covers heating/electric/internet share.</div>
               </div>
             )}
-            <div className="text-xs text-zinc-500 mt-1">Commute est.: <Money value={commuteMonthly} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Home & kids</label>
             <div className="flex gap-2 flex-wrap mt-2">
               {(["solo", "partner", "partnerKids", "singleParent", "share", "family"] as Household[]).map((h) => (
-                <button key={h} onClick={() => { setHousehold(h); if (h === "partner" || h === "solo" || h === "share" || h === "family") setChildrenCount(0); }} className={`px-3 py-2 rounded-full border text-sm ${household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                  {h === "solo" ? "Solo" : h === "partner" ? "Partner" : h === "partnerKids" ? "Partner + kids" : h === "singleParent" ? "Single parent" : h === "share" ? "House share" : "Back home"}
+                <button
+                  key={h}
+                  onClick={() => {
+                    setHousehold(h);
+                    if (h === "partner" || h === "solo" || h === "share" || h === "family") setChildrenCount(0);
+                  }}
+                  className={`px-3 py-2 rounded-full border text-sm ${
+                    household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                  }`}
+                >
+                  {h === "solo"
+                    ? "Solo"
+                    : h === "partner"
+                    ? "Partner"
+                    : h === "partnerKids"
+                    ? "Partner + kids"
+                    : h === "singleParent"
+                    ? "Single parent"
+                    : h === "share"
+                    ? "House share"
+                    : "Back home"}
                 </button>
               ))}
             </div>
@@ -746,8 +862,15 @@ export default function Page() {
                   <label className="text-sm">Children</label>
                   <div className="flex gap-2 mt-2">
                     {[0, 1, 2, 3].map((n) => (
-                      <button key={n} onClick={() => setChildrenCount(n)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                        {n}{n === 3 ? "+" : ""}
+                      <button
+                        key={n}
+                        onClick={() => setChildrenCount(n)}
+                        className={`px-3 py-1.5 rounded-full border text-sm ${
+                          childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                        }`}
+                      >
+                        {n}
+                        {n === 3 ? "+" : ""}
                       </button>
                     ))}
                   </div>
@@ -756,13 +879,22 @@ export default function Page() {
                   <label className="text-sm">Age band</label>
                   <div className="flex gap-2 mt-2">
                     {(["nursery", "school"] as ChildAge[]).map((a) => (
-                      <button key={a} onClick={() => setChildrenAge(a)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenAge === a ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                      <button
+                        key={a}
+                        onClick={() => setChildrenAge(a)}
+                        className={`px-3 py-1.5 rounded-full border text-sm ${
+                          childrenAge === a ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                        }`}
+                      >
                         {a === "nursery" ? "Nursery/Pre-K" : "School age"}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="text-xs text-zinc-600 col-span-2">Estimated children-related monthly costs: <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} /></div>
+                <div className="text-xs text-zinc-600 col-span-2">
+                  Estimated children-related monthly costs:{" "}
+                  <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} />
+                </div>
               </div>
             )}
           </div>
@@ -770,19 +902,25 @@ export default function Page() {
           <div>
             <label className="text-sm">Debt repayments</label>
             <InputRange min={0} max={2000} step={10} value={debtMonthly} onValue={setDebtMonthly} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1"><Money value={debtMonthly} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              <Money value={debtMonthly} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Student loan</label>
             <InputRange min={0} max={300} step={5} value={studentLoan} onValue={setStudentLoan} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1"><Money value={studentLoan} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              <Money value={studentLoan} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Savings / pension rate</label>
             <InputRange min={0} max={20} step={1} value={savingsRate} onValue={setSavingsRate} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">{savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              {savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month
+            </div>
           </div>
 
           {region === "US" && (
@@ -790,7 +928,13 @@ export default function Page() {
               <label className="text-sm">Healthcare (US)</label>
               <div className="flex gap-2 flex-wrap mt-2">
                 {(["employer", "market", "none"] as HealthPlanUS[]).map((p) => (
-                  <button key={p} onClick={() => setUsHealthPlan(p)} className={`px-3 py-2 rounded-full border text-sm ${usHealthPlan === p ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                  <button
+                    key={p}
+                    onClick={() => setUsHealthPlan(p)}
+                    className={`px-3 py-2 rounded-full border text-sm ${
+                      usHealthPlan === p ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                    }`}
+                  >
                     {p === "employer" ? "Employer plan" : p === "market" ? "Marketplace" : "Uninsured"}
                   </button>
                 ))}
@@ -812,13 +956,25 @@ export default function Page() {
             return (
               <div key={key} className={`border rounded-2xl p-4 shadow-sm ${border} ${bg}`}>
                 <div className={`text-sm font-medium flex items-center gap-2 ${titleClr}`}>
-                  <span className="text-lg" aria-hidden>{meta.emoji}</span>
+                  <span className="text-lg" aria-hidden>
+                    {meta.emoji}
+                  </span>
                   {meta.title}
                 </div>
                 <div className="text-xs text-zinc-600 mb-3">{meta.sub}</div>
-                <InputRange min={lim.min} max={lim.max} step={lim.step} value={drivers[key]} onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))} className="w-full" />
+                <InputRange
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={drivers[key]}
+                  onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))}
+                  className="w-full"
+                />
                 <div className="text-xs text-zinc-500 mt-1">
-                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}{DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}{lim.min}–{currency}{lim.max}
+                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}
+                  {DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}
+                  {lim.min}–{currency}
+                  {lim.max}
                 </div>
               </div>
             );
@@ -829,19 +985,48 @@ export default function Page() {
             return (
               <div key={k} className="border rounded-2xl p-4">
                 <div className="text-sm font-medium mb-2">{lim.label}</div>
-                <InputRange min={lim.min} max={lim.max} step={lim.step} value={spends[k]} onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))} className="w-full" />
-                <div className="text-xs text-zinc-500 mt-1">Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}{lim.min}–{currency}{lim.max})</div>
-                {k === "pet" && <div className="text-[11px] text-zinc-500">Exclude fashion/grooming; include vet, insurance, daycare/boarding, horses.</div>}
-                {k === "health" && <div className="text-[11px] text-zinc-500">Exclude insurance premiums; include meds, dental, vision, therapy not covered.</div>}
+                <InputRange
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={spends[k]}
+                  onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))}
+                  className="w-full"
+                />
+                <div className="text-xs text-zinc-500 mt-1">
+                  Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}
+                  {lim.min}–{currency}
+                  {lim.max})
+                </div>
+                {k === "pet" && (
+                  <div className="text-[11px] text-zinc-500">
+                    Exclude fashion/grooming; include vet, insurance, daycare/boarding, horses.
+                  </div>
+                )}
+                {k === "health" && (
+                  <div className="text-[11px] text-zinc-500">
+                    Exclude insurance premiums; include meds, dental, vision, therapy not covered.
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
         <div className="flex flex-wrap justify-between items-center gap-2 mt-6">
-          <button onClick={back} className="px-3 py-2 rounded-lg border">Back</button>
+          <button onClick={back} className="px-3 py-2 rounded-lg border">
+            Back
+          </button>
           <div className="flex gap-2">
-            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
+            <button
+              onClick={() => {
+                saveBaseline();
+                next();
+              }}
+              className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600"
+            >
+              Continue
+            </button>
           </div>
         </div>
       </CardBody>
@@ -861,7 +1046,9 @@ export default function Page() {
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">PT baseline</span>
             </div>
             <h2 className="text-xl font-semibold mt-2">Your month, in plain numbers</h2>
-            <p className="text-sm text-zinc-500 max-w-md">Standardised baseline shows Public Transport + Typical behaviours for your area. Your choices change the deltas.</p>
+            <p className="text-sm text-zinc-500 max-w-md">
+              Standardised baseline shows Public Transport + Typical behaviours for your area. Your choices change the deltas.
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <input
@@ -872,18 +1059,27 @@ export default function Page() {
             />
             <button
               onClick={saveEmail}
-              className={`px-4 py-2 rounded-lg font-medium transition ${emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"}`}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              }`}
             >
               {emailSaved ? (abVariant === "A" ? "Email saved" : "Saved") : abVariant === "A" ? "Email me the 1-page plan" : "Unlock my plan"}
             </button>
           </div>
         </div>
-        <div className="text-[11px] text-zinc-500 italic mt-1 sm:text-right">Anonymous analytics stored. Email optional and stored separately.</div>
+        <div className="text-[11px] text-zinc-500 italic mt-1 sm:text-right">
+          Anonymous analytics stored. Email optional and stored separately.
+        </div>
 
         <div className="mt-5 grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="relative">
-              <div ref={shareRef} className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}>
+              <div
+                ref={shareRef}
+                className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${
+                  !emailSaved ? "blur-sm select-none pointer-events-none" : ""
+                }`}
+              >
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
                 <div className="text-3xl font-bold mt-1">
                   {currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
@@ -910,10 +1106,28 @@ export default function Page() {
                 )}
 
                 <div className="mt-4">
+                  {/* NEW: Toggle for including Other income in chart totals */}
+                  <div className="flex items-center gap-2 text-xs text-zinc-400 mb-2">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="accent-emerald-600"
+                        checked={includeOtherIncomeInChart}
+                        onChange={(e) => setIncludeOtherIncomeInChart(e.target.checked)}
+                      />
+                      Include “Other income” in chart totals
+                    </label>
+                    {!includeOtherIncomeInChart && (
+                      <span className="text-[11px] text-zinc-500">
+                        (Chart shows only income exchanged for hours of work)
+                      </span>
+                    )}
+                  </div>
+
                   <div className="text-xs text-zinc-400 mb-2">If you do nothing, here’s where it goes</div>
                   <BarChart
                     currency={currency}
-                    net={netMonthly}
+                    net={chartNet}            // <- uses toggle-adjusted net
                     housing={housing}
                     commute={baselineCommute}
                     maintenance={baselineMaintenance}
@@ -923,7 +1137,9 @@ export default function Page() {
                     savings={savingsMonthly}
                   />
                 </div>
-                <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
+                <div className="mt-4 text-xs text-zinc-400">
+                  Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}
+                </div>
               </div>
 
               {!emailSaved && (
@@ -933,10 +1149,22 @@ export default function Page() {
                     <div className="mt-1 font-semibold">Unlock your personalised report</div>
                     <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
                     <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                      <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
-                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
+                      <input
+                        placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900"
+                      />
+                      <button
+                        onClick={saveEmail}
+                        className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600"
+                      >
+                        Unlock
+                      </button>
                     </div>
-                    <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
+                    <div className="text-[11px] text-zinc-300 mt-2">
+                      One email. No spam — just your PDF and a few tips.
+                    </div>
                   </div>
                 </div>
               )}
@@ -944,7 +1172,9 @@ export default function Page() {
 
             {imageUrl && (
               <div className="space-y-2">
-                <div className="text-sm text-zinc-600">Share image ready — right click to save, or long-press on mobile.</div>
+                <div className="text-sm text-zinc-600">
+                  Share image ready — right click to save, or long-press on mobile.
+                </div>
                 <img src={imageUrl} alt="share" className="w-full rounded-lg border" />
               </div>
             )}
@@ -960,7 +1190,9 @@ export default function Page() {
                 <div className="mt-2 h-2 w-full rounded bg-zinc-200 overflow-hidden">
                   <div className="h-2 bg-emerald-500" style={{ width: `${efficiencyScore}%` }} />
                 </div>
-                <div className="text-[11px] text-zinc-500 mt-2">Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.</div>
+                <div className="text-[11px] text-zinc-500 mt-2">
+                  Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.
+                </div>
               </CardBody>
             </Card>
 
@@ -1100,15 +1332,23 @@ export default function Page() {
             <Card>
               <CardBody>
                 <div className="text-sm">Commute estimate</div>
-                <div className="text-2xl font-semibold mt-1"><Money value={commuteMonthly} currency={currency} /> / month</div>
-                <div className="text-xs text-zinc-500 mt-2">Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.</div>
+                <div className="text-2xl font-semibold mt-1">
+                  <Money value={commuteMonthly} currency={currency} /> / month
+                </div>
+                <div className="text-xs text-zinc-500 mt-2">
+                  Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.
+                </div>
               </CardBody>
             </Card>
 
             <Card>
               <CardBody>
                 <div className="text-sm">Maintenance totals</div>
-                <div className="text-xs text-zinc-500 mt-1">Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} /></div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  Drivers: <Money value={driversSum} currency={currency} /> • Variable spends:{" "}
+                  <Money value={variableSum} currency={currency} /> • Bills/utilities:{" "}
+                  <Money value={billsUtilities} currency={currency} />
+                </div>
               </CardBody>
             </Card>
 
@@ -1116,7 +1356,9 @@ export default function Page() {
               <Card>
                 <CardBody>
                   <div className="text-sm">Healthcare gap</div>
-                  <div className="text-2xl font-semibold mt-1"><Money value={healthcareMonthly} currency={currency} /> / month</div>
+                  <div className="text-2xl font-semibold mt-1">
+                    <Money value={healthcareMonthly} currency={currency} /> / month
+                  </div>
                 </CardBody>
               </Card>
             )}
@@ -1125,13 +1367,17 @@ export default function Page() {
               <Card>
                 <CardBody>
                   <div className="text-sm">Savings / pension</div>
-                  <div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)</div>
+                  <div className="text-2xl font-semibold mt-1">
+                    <Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)
+                  </div>
                 </CardBody>
               </Card>
             )}
 
             <div className="flex gap-2">
-              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
+              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">
+                Create share image
+              </button>
             </div>
           </div>
         </div>
@@ -1189,7 +1435,9 @@ function getOrCreateSessionId(): string {
   } catch {
     const id = "sid_" + Math.random().toString(36).slice(2);
     setCookie("rcs_sid", id);
-    try { if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id); } catch {}
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
+    } catch {}
     return id;
   }
 }
@@ -1270,7 +1518,9 @@ function StickyNumericInput(props: {
         const norm = normalize(el.value);
         el.value = norm;
         onValue(norm);
-        try { el.setSelectionRange(pos, pos); } catch {}
+        try {
+          el.setSelectionRange(pos, pos);
+        } catch {}
       }}
       {...rest}
     />
