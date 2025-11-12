@@ -402,7 +402,17 @@ export default function Page() {
   }, [baselineLeftover, hoursPerMonth]);
 
   // --- Challenge-mode derived values ---
-  const simCommute = useMemo(() => Math.max(0, Math.round(baselineCommute * (1 - simRemoteDays / 5))), [baselineCommute, simRemoteDays]);
+   const effectiveBaseCommute = useMemo(() => {
+  // If user already has no commute, base is 0
+  if (transportMode === "remote" || transportMode === "walk") return 0;
+  const base = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
+  return Math.round(base * commuteMul);
+}, [transportMode, regionData, commuteMul]);
+
+  const simCommute = useMemo(
+  () => Math.max(0, Math.round(effectiveBaseCommute * (1 - simRemoteDays / 5))),
+  [effectiveBaseCommute, simRemoteDays]
+);
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
   const simLeftover = useMemo(
@@ -954,13 +964,20 @@ export default function Page() {
           <span>{simRemoteDays}</span>
         </div>
         <InputRange
-          min={0}
-          max={5}
-          step={1}
-          value={simRemoteDays}
-          onValue={setSimRemoteDays}
-          className="w-full accent-amber-600"
-        />
+  min={0}
+  max={5}
+  step={1}
+  value={simRemoteDays}
+  onValue={setSimRemoteDays}
+  className="w-full"
+  disabled={effectiveBaseCommute === 0}
+/>
+{effectiveBaseCommute === 0 && (
+  <div className="mt-1 text-[11px] text-zinc-500">
+    You’re already remote / no commute selected — nothing to reduce here.
+  </div>
+)}
+
       </div>
 
       <div>
