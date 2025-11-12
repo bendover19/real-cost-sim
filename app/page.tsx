@@ -298,9 +298,11 @@ export default function Page() {
   // “Feels uncontrolled” text inputs
   const [takeHomeStr, setTakeHomeStr] = useState<string>("2200");
   const [housingStr, setHousingStr] = useState<string>("1200");
+  const [otherIncomeStr, setOtherIncomeStr] = useState<string>("0"); // NEW
 
   const takeHome = useMemo(() => toNumberSafe(takeHomeStr), [takeHomeStr]);
   const housing = useMemo(() => toNumberSafe(housingStr), [housingStr]);
+  const otherIncome = useMemo(() => toNumberSafe(otherIncomeStr), [otherIncomeStr]); // NEW
 
   const [housingTouched, setHousingTouched] = useState<boolean>(false);
   const [household, setHousehold] = useState<Household>("solo");
@@ -346,8 +348,8 @@ export default function Page() {
 
   const netMonthly = useMemo(() => {
     const base = isGross ? approximateFromGross(region, takeHome) : takeHome;
-    return Math.max(0, base);
-  }, [isGross, takeHome, region]);
+    return Math.max(0, base + otherIncome); // UPDATED
+  }, [isGross, takeHome, region, otherIncome]);
 
   useEffect(() => {
     if (!housingTouched) {
@@ -658,6 +660,25 @@ export default function Page() {
             </div>
             {takeHomeWeird && <div className="text-[11px] text-amber-600 mt-1">Looks unusually high for monthly. If yearly, divide by 12.</div>}
             <p className="text-xs text-zinc-500 mt-1">If Gross selected, we estimate Net with a quick regional factor.</p>
+          </div>
+
+          {/* NEW: Other income */}
+          <div>
+            <label className="text-sm">Other income (optional)</label>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-zinc-500">{currency}</span>
+              <StickyNumericInput
+                id="other-income-input"
+                data-probe="other-income"
+                defaultValue={otherIncomeStr}
+                onValue={setOtherIncomeStr}
+                className="w-full rounded-lg border p-2 bg-white"
+                aria-label="Other monthly income"
+              />
+            </div>
+            <p className="text-xs text-zinc-500 mt-1">
+              e.g. benefits, rental income, family support, interest, dividends
+            </p>
           </div>
 
           <div>
