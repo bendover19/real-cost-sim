@@ -907,9 +907,6 @@ export default function Page() {
               </span>
             </div>
             <h2 className="text-xl font-semibold mt-2">Your month, in plain numbers</h2>
-            <p className="text-sm text-zinc-500 max-w-md">
-              “Typical local month” uses public transport costs and typical behaviours for your area. Switch the chart to “Your month” to reflect your actual settings.
-            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <input
