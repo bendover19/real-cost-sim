@@ -865,7 +865,7 @@ export default function Page() {
                 {/* Plain-English hourly line (baseline) */}
 {baselineFreedom >= 0 ? (
   <div className="text-lg mt-1">
-    After every hour you spend working (including commuting), you truly keep about{" "}
+    Every hour you spend working (including commuting), you keep about{" "}
     <strong>{currency}{baselineFreedom.toFixed(2)}</strong> of disposable money.
   </div>
 ) : (
@@ -938,59 +938,97 @@ export default function Page() {
               </CardBody>
             </Card>
 
-            <Card>
+<Card className="bg-gradient-to-br from-amber-50 via-orange-100 to-rose-50 border-amber-200 shadow-md hover:shadow-lg transition-shadow">
   <CardBody>
-    <div className="text-sm font-medium">Try quick changes</div>
-    <div className="mt-2 space-y-3 text-sm">
+    {/* Title */}
+    <div className="text-lg font-bold text-amber-800 tracking-tight mb-2 flex items-center gap-2">
+      <span className="text-2xl">🎯</span>
+      <span className="drop-shadow-sm">Try quick changes</span>
+    </div>
+
+    {/* Sliders */}
+    <div className="mt-2 space-y-4 text-sm">
       <div>
-        <div className="flex justify-between">
+        <div className="flex justify-between text-zinc-700 font-medium">
           <span>Remote days / week</span>
           <span>{simRemoteDays}</span>
         </div>
-        <InputRange min={0} max={5} step={1} value={simRemoteDays} onValue={setSimRemoteDays} className="w-full" />
+        <InputRange
+          min={0}
+          max={5}
+          step={1}
+          value={simRemoteDays}
+          onValue={setSimRemoteDays}
+          className="w-full accent-amber-600"
+        />
       </div>
+
       <div>
-        <div className="flex justify-between">
+        <div className="flex justify-between text-zinc-700 font-medium">
           <span>Rent change (monthly)</span>
           <span>{currency}{simRentDelta}</span>
         </div>
-        <InputRange min={-600} max={600} step={50} value={simRentDelta} onValue={setSimRentDelta} className="w-full" />
+        <InputRange
+          min={-600}
+          max={600}
+          step={50}
+          value={simRentDelta}
+          onValue={setSimRentDelta}
+          className="w-full accent-amber-600"
+        />
       </div>
+
       <div>
-        <div className="flex justify-between">
+        <div className="flex justify-between text-zinc-700 font-medium">
           <span>Income change (monthly)</span>
           <span>{currency}{simIncomeDelta}</span>
         </div>
-        <InputRange min={-500} max={1500} step={50} value={simIncomeDelta} onValue={setSimIncomeDelta} className="w-full" />
+        <InputRange
+          min={-500}
+          max={1500}
+          step={50}
+          value={simIncomeDelta}
+          onValue={setSimIncomeDelta}
+          className="w-full accent-amber-600"
+        />
       </div>
     </div>
 
-    {/* SUPER SIMPLE READOUT */}
-    <div className="mt-4 rounded-xl border bg-white p-3 text-sm space-y-2">
+    {/* Results box */}
+    <div className="mt-5 rounded-xl border border-amber-300 bg-white/70 backdrop-blur p-3 text-sm space-y-2 shadow-inner">
       <div className="flex items-center justify-between">
-        <span className="text-zinc-600">Before (baseline)</span>
-        <span className="font-medium">
+        <span className="text-zinc-600 font-medium">Before (baseline)</span>
+        <span className="font-medium text-zinc-800">
           {currency}{Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}{baselineFreedom.toFixed(2)}/hr
         </span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-zinc-600">After (with changes)</span>
-        <span className="font-semibold">
+        <span className="text-zinc-600 font-medium">After (with changes)</span>
+        <span className="font-semibold text-amber-800">
           {currency}{Math.max(0, simLeftover).toLocaleString()} / mo · {currency}{simFreedom.toFixed(2)}/hr
         </span>
       </div>
 
-      <div className={`flex items-center justify-between ${simDelta >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-        <span>Difference</span>
+      <div
+        className={`flex items-center justify-between ${
+          simDelta >= 0 ? "text-emerald-700" : "text-rose-700"
+        }`}
+      >
+        <span className="font-medium">Difference</span>
         <span className="font-semibold">
-          {simDelta >= 0 ? "+" : ""}{currency}{simDelta.toLocaleString()} / mo · {simDeltaPerHour >= 0 ? "+" : ""}{currency}{simDeltaPerHour.toFixed(2)}/hr
+          {simDelta >= 0 ? "+" : ""}
+          {currency}{simDelta.toLocaleString()} / mo ·{" "}
+          {simDeltaPerHour >= 0 ? "+" : ""}
+          {currency}{simDeltaPerHour.toFixed(2)}/hr
         </span>
       </div>
 
       <div className="text-xs text-zinc-600 pt-1">
         Plain English: You’d keep{" "}
-        <span className="font-medium">
-          {simDelta >= 0 ? `${currency}${simDelta.toLocaleString()} more` : `${currency}${Math.abs(simDelta).toLocaleString()} less`}
+        <span className="font-medium text-amber-700">
+          {simDelta >= 0
+            ? `${currency}${simDelta.toLocaleString()} more`
+            : `${currency}${Math.abs(simDelta).toLocaleString()} less`}
         </span>{" "}
         each month with the sliders set above.
       </div>
@@ -1000,6 +1038,7 @@ export default function Page() {
     </div>
   </CardBody>
 </Card>
+
 
 
             <Card>
