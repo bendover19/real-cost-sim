@@ -570,14 +570,31 @@ export default function Page() {
               </select>
             </div>
             <div>
-              <label className="text-sm">Area type</label>
-              <select value={urbanicity} onChange={(e) => setUrbanicity(e.target.value as Urbanicity)} className="w-full mt-2 rounded-lg border p-2 bg-white">
-                {Object.entries(URBANICITY).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
+              <div>
+  <label className="text-sm">Area type</label>
+  <select
+    value={urbanicity}
+    onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
+    className="w-full mt-2 rounded-lg border p-2 bg-white"
+  >
+    <option value="inner" title="Dense downtown core — highest rents, short commute">
+      City centre / downtown
+    </option>
+    <option value="city" title="Wider metro area — moderate rent, balanced commute">
+      Urban / metro area
+    </option>
+    <option value="suburban" title="Residential areas outside the main city — lower rent, longer commute">
+      Suburban
+    </option>
+    <option value="rural" title="Small town or countryside — lowest rent, longest commute">
+      Rural / small town
+    </option>
+  </select>
+  <div className="text-[11px] text-zinc-500 mt-1">
+    Affects rent and commute estimates — choose where you mainly live.
+  </div>
+</div>
+
             </div>
             <div>
               <label className="text-sm">Commute context</label>
