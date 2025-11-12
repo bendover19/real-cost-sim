@@ -947,7 +947,7 @@ export default function Page() {
                       checked={chartUseBaseline}
                       onChange={(e) => { setChartUseBaseline(e.target.checked); setChartToggleTouched(true); }}
                     />
-                    Use PT baseline in chart
+                    Use typical commute costs in chart
                   </label>
                   <label className="inline-flex items-center gap-2">
                     <input
