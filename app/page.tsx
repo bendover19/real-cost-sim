@@ -928,7 +928,8 @@ export default function Page() {
         <div className="mt-5 grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="relative">
-              <div ref={shareRef} className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}>
+              <div ref={shareRef} /*className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}*/className="bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg"
+>
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
                 <div className="text-3xl font-bold mt-1">
                   {currency}{Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
@@ -991,7 +992,7 @@ export default function Page() {
                 <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
               </div>
 
-              {!emailSaved && (
+              {/*!emailSaved && (
                 <div className="absolute inset-0 grid place-items-center">
                   <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4 text-white">
                     <div className="text-3xl">🔒</div>
@@ -1004,7 +1005,7 @@ export default function Page() {
                     <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
                   </div>
                 </div>
-              )}
+              )*/}
             </div>
 
             {imageUrl && (
