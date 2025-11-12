@@ -965,7 +965,7 @@ export default function Page() {
                       checked={chartUseBaseline}
                       onChange={(e) => { setChartUseBaseline(e.target.checked); setChartToggleTouched(true); }}
                     />
-                    Use “Typical local month” in chart
+                    Use typical transit costs in chart (auto unchecked if remote)
                   </label>
                   <label className="inline-flex items-center gap-2">
                     <input
