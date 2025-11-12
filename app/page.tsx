@@ -8,7 +8,7 @@ import html2canvas from "html2canvas";
    - Sliders unchanged
    - Text inputs are "sticky" (uncontrolled) so focus never jumps
    - Sections render once and are hidden/shown (no remounts)
-   - Chart toggle for PT baseline vs Your settings
+   - Chart toggle for Typical local month vs Your month
    - Checkbox to include/exclude Other income in chart total
    ============================================================ */
 
@@ -199,12 +199,17 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
 const CardBody: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <div className={`p-5 ${className || ""}`}>{children}</div>
 );
-const Money: React.FC<{ value: number; currency: string }> = ({ value, currency }) => (
-  <span className="tabular-nums font-semibold">
-    {currency}
-    {Math.max(0, value).toLocaleString()}
-  </span>
-);
+
+// Money now supports optional clamping (default true)
+const Money: React.FC<{ value: number; currency: string; clampZero?: boolean }> = ({ value, currency, clampZero = true }) => {
+  const v = clampZero ? Math.max(0, value) : value;
+  return (
+    <span className="tabular-nums font-semibold">
+      {currency}
+      {v.toLocaleString()}
+    </span>
+  );
+};
 
 // ---------- Chart ----------
 function BarChart({
@@ -371,6 +376,12 @@ export default function Page() {
     [includeOtherInChart, netMonthly, baseNetFromPrimary]
   );
 
+  // Savings slice should reflect the same net as the chart
+  const savingsForChart = useMemo(
+    () => computeSavingsFromRate(includeOtherInChart ? netMonthly : baseNetFromPrimary, savingsRate),
+    [includeOtherInChart, netMonthly, baseNetFromPrimary, savingsRate]
+  );
+
   useEffect(() => {
     if (!housingTouched) {
       const v = Math.round(suggestedHousing(region, household) * rentMul);
@@ -423,7 +434,7 @@ export default function Page() {
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [baselineLeftover, hoursPerMonth]);
 
-  // --- Auto switch chart to "Your settings" when commute is already zero ---
+  // --- Auto switch chart to "Your month" when commute is already zero ---
   useEffect(() => {
     if ((transportMode === "remote" || transportMode === "walk") && chartUseBaseline && !chartToggleTouched) {
       setChartUseBaseline(false);
@@ -876,6 +887,11 @@ export default function Page() {
   const chartCommute = chartUseBaseline ? baselineCommute : commuteMonthly;
   const chartMaintenance = chartUseBaseline ? baselineMaintenance : maintenanceSum;
 
+  // Headline values reflect whichever view the user selected
+  const headlineLeftover = chartUseBaseline ? baselineLeftover : leftover;
+  const headlineFreedom = chartUseBaseline ? baselineFreedom : effectivePerHour;
+  const netForHeadline = netForChart;
+
   const RevealSection = (
     <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
@@ -887,11 +903,13 @@ export default function Page() {
             <div className="flex items-center gap-2 text-xs text-zinc-600">
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">{badgeLeft}</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">
-                {chartUseBaseline ? "PT baseline" : "Your settings"}
+                {chartUseBaseline ? "Typical local month" : "Your month"}
               </span>
             </div>
             <h2 className="text-xl font-semibold mt-2">Your month, in plain numbers</h2>
-            <p className="text-sm text-zinc-500 max-w-md">Standardised baseline shows Public Transport + Typical behaviours for your area. You can switch the chart to your actual settings.</p>
+            <p className="text-sm text-zinc-500 max-w-md">
+              “Typical local month” uses public transport costs and typical behaviours for your area. Switch the chart to “Your month” to reflect your actual settings.
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <input
@@ -916,13 +934,13 @@ export default function Page() {
               <div ref={shareRef} className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}>
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
                 <div className="text-3xl font-bold mt-1">
-                  {currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
+                  {currency}{Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
-                {/* Plain-English hourly line (baseline) */}
-                {baselineFreedom >= 0 ? (
+                {/* Plain-English hourly line (respects toggle) */}
+                {headlineFreedom >= 0 ? (
                   <div className="text-lg mt-1">
                     Every hour you spend working (including commuting), you keep about{" "}
-                    <strong>{currency}{baselineFreedom.toFixed(2)}</strong> of disposable money.
+                    <strong>{currency}{headlineFreedom.toFixed(2)}</strong> of disposable money.
                   </div>
                 ) : (
                   <div className="text-lg mt-1 text-rose-300">
@@ -933,9 +951,9 @@ export default function Page() {
                   Calculated from your net discretionary pay ÷ actual hours (incl. commute).
                 </div>
 
-                {netMonthly > 0 && (
+                {netForHeadline > 0 && (
                   <div className="text-3xl font-bold mt-1">
-                    Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, baselineLeftover) / netMonthly).toFixed(2)} goes to staying employable and functional.
+                    Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to staying employable and functional.
                   </div>
                 )}
 
@@ -947,7 +965,7 @@ export default function Page() {
                       checked={chartUseBaseline}
                       onChange={(e) => { setChartUseBaseline(e.target.checked); setChartToggleTouched(true); }}
                     />
-                    Use typical commute costs in chart
+                    Use “Typical local month” in chart
                   </label>
                   <label className="inline-flex items-center gap-2">
                     <input
@@ -970,7 +988,7 @@ export default function Page() {
                     dependents={dependentsMonthly}
                     healthcare={healthcareMonthly}
                     debt={debtMonthly + studentLoan}
-                    savings={savingsMonthly}
+                    savings={savingsForChart}
                   />
                 </div>
                 <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
@@ -1125,7 +1143,7 @@ export default function Page() {
               <CardBody>
                 <div className="text-sm">Your chosen month (with your commute & drivers)</div>
                 <div className="text-2xl font-semibold mt-1">
-                  Kept: <Money value={leftover} currency={currency} />
+                  Kept: <Money value={leftover} currency={currency} clampZero={false} />
                 </div>
                 <div className="text-sm mt-1">
                   {effectivePerHour >= 0 ? (
