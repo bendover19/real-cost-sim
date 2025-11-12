@@ -183,7 +183,9 @@ function computeSavingsFromRate(netMonthly: number, ratePct: number) {
   return Math.round((netMonthly * Math.max(0, Math.min(20, ratePct))) / 100);
 }
 function toNumberSafe(v: string): number {
-  if (v.trim() === "" || v === "-") return 0;
+  if (v.trim) {
+    if (v.trim() === "" || v === "-") return 0;
+  }
   const n = Number(v.replace(/[, ]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
@@ -404,17 +406,16 @@ export default function Page() {
   }, [baselineLeftover, hoursPerMonth]);
 
   // --- Challenge-mode derived values ---
-   const effectiveBaseCommute = useMemo(() => {
-  // If user already has no commute, base is 0
-  if (transportMode === "remote" || transportMode === "walk") return 0;
-  const base = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
-  return Math.round(base * commuteMul);
-}, [transportMode, regionData, commuteMul]);
+  const effectiveBaseCommute = useMemo(() => {
+    if (transportMode === "remote" || transportMode === "walk") return 0;
+    const base = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
+    return Math.round(base * commuteMul);
+  }, [transportMode, regionData, commuteMul]);
 
   const simCommute = useMemo(
-  () => Math.max(0, Math.round(effectiveBaseCommute * (1 - simRemoteDays / 5))),
-  [effectiveBaseCommute, simRemoteDays]
-);
+    () => Math.max(0, Math.round(effectiveBaseCommute * (1 - simRemoteDays / 5))),
+    [effectiveBaseCommute, simRemoteDays]
+  );
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
   const simLeftover = useMemo(
@@ -425,13 +426,8 @@ export default function Page() {
     const per = simLeftover / Math.max(1, hoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [simLeftover, hoursPerMonth]);
-     const simDelta = useMemo(() => simLeftover - baselineLeftover, [
-    simLeftover, baselineLeftover,
-  ]);
-  const simDeltaPerHour = useMemo(() => simFreedom - baselineFreedom, [
-    simFreedom, baselineFreedom,
-  ]);
-
+  const simDelta = useMemo(() => simLeftover - baselineLeftover, [simLeftover, baselineLeftover]);
+  const simDeltaPerHour = useMemo(() => simFreedom - baselineFreedom, [simFreedom, baselineFreedom]);
 
   // Life Efficiency Score
   function norm(x: number, min: number, max: number) {
@@ -583,30 +579,29 @@ export default function Page() {
             </div>
             <div>
               <div>
-  <label className="text-sm">Area type</label>
-  <select
-    value={urbanicity}
-    onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
-    className="w-full mt-2 rounded-lg border p-2 bg-white"
-  >
-    <option value="inner" title="Dense downtown core — highest rents, short commute">
-      City centre / downtown
-    </option>
-    <option value="city" title="Wider metro area — moderate rent, balanced commute">
-      Urban / metro area
-    </option>
-    <option value="suburban" title="Residential areas outside the main city — lower rent, longer commute">
-      Suburban
-    </option>
-    <option value="rural" title="Small town or countryside — lowest rent, longest commute">
-      Rural / small town
-    </option>
-  </select>
-  <div className="text-[11px] text-zinc-500 mt-1">
-    Affects rent and commute estimates — choose where you mainly live.
-  </div>
-</div>
-
+                <label className="text-sm">Area type</label>
+                <select
+                  value={urbanicity}
+                  onChange={(e) => setUrbanicity(e.target.value as Urbanicity)}
+                  className="w-full mt-2 rounded-lg border p-2 bg-white"
+                >
+                  <option value="inner" title="Dense downtown core — highest rents, short commute">
+                    City centre / downtown
+                  </option>
+                  <option value="city" title="Wider metro area — moderate rent, balanced commute">
+                    Urban / metro area
+                  </option>
+                  <option value="suburban" title="Residential areas outside the main city — lower rent, longer commute">
+                    Suburban
+                  </option>
+                  <option value="rural" title="Small town or countryside — lowest rent, longest commute">
+                    Rural / small town
+                  </option>
+                </select>
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  Affects rent and commute estimates — choose where you mainly live.
+                </div>
+              </div>
             </div>
             <div>
               <label className="text-sm">Commute context</label>
@@ -894,19 +889,19 @@ export default function Page() {
                   {currency}{Math.max(0, baselineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
                 {/* Plain-English hourly line (baseline) */}
-{baselineFreedom >= 0 ? (
-  <div className="text-lg mt-1">
-    Every hour you spend working (including commuting), you keep about{" "}
-    <strong>{currency}{baselineFreedom.toFixed(2)}</strong> of disposable money.
-  </div>
-) : (
-  <div className="text-lg mt-1 text-rose-300">
-    You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
-  </div>
-)}
-<div className="text-[11px] text-zinc-500 mt-1 italic">
-  Calculated from your net discretionary pay ÷ actual hours (incl. commute).
-</div>
+                {baselineFreedom >= 0 ? (
+                  <div className="text-lg mt-1">
+                    Every hour you spend working (including commuting), you keep about{" "}
+                    <strong>{currency}{baselineFreedom.toFixed(2)}</strong> of disposable money.
+                  </div>
+                ) : (
+                  <div className="text-lg mt-1 text-rose-300">
+                    You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+                  </div>
+                )}
+                <div className="text-[11px] text-zinc-500 mt-1 italic">
+                  Calculated from your net discretionary pay ÷ actual hours (incl. commute).
+                </div>
 
                 {netMonthly > 0 && (
                   <div className="text-3xl font-bold mt-1">
@@ -969,134 +964,131 @@ export default function Page() {
               </CardBody>
             </Card>
 
-<Card className="bg-gradient-to-br from-amber-50 via-orange-100 to-rose-50 border-amber-200 shadow-md hover:shadow-lg transition-shadow">
-  <CardBody>
-    {/* Title */}
-    <div className="text-lg font-bold text-amber-800 tracking-tight mb-2 flex items-center gap-2">
-      <span className="text-2xl">🎯</span>
-      <span className="drop-shadow-sm">Try quick changes</span>
-    </div>
+            <Card className="bg-gradient-to-br from-amber-50 via-orange-100 to-rose-50 border-amber-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardBody>
+                {/* Title */}
+                <div className="text-lg font-bold text-amber-800 tracking-tight mb-2 flex items-center gap-2">
+                  <span className="text-2xl">🎯</span>
+                  <span className="drop-shadow-sm">Try quick changes</span>
+                </div>
 
-    {/* Sliders */}
-    <div className="mt-2 space-y-4 text-sm">
-      <div>
-        <div className="flex justify-between text-zinc-700 font-medium">
-          <span>Remote days / week</span>
-          <span>{simRemoteDays}</span>
-        </div>
-        <InputRange
-  min={0}
-  max={5}
-  step={1}
-  value={simRemoteDays}
-  onValue={setSimRemoteDays}
-  className="w-full"
-  disabled={effectiveBaseCommute === 0}
-/>
-{effectiveBaseCommute === 0 && (
-  <div className="mt-1 text-[11px] text-zinc-500">
-    You’re already remote / no commute selected — nothing to reduce here.
-  </div>
-)}
+                {/* Sliders */}
+                <div className="mt-2 space-y-4 text-sm">
+                  <div>
+                    <div className="flex justify-between text-zinc-700 font-medium">
+                      <span>Remote days / week</span>
+                      <span>{simRemoteDays}</span>
+                    </div>
+                    <InputRange
+                      min={0}
+                      max={5}
+                      step={1}
+                      value={simRemoteDays}
+                      onValue={setSimRemoteDays}
+                      className="w-full"
+                      disabled={effectiveBaseCommute === 0}
+                    />
+                    {effectiveBaseCommute === 0 && (
+                      <div className="mt-1 text-[11px] text-zinc-500">
+                        You’re already remote / no commute selected — nothing to reduce here.
+                      </div>
+                    )}
+                  </div>
 
-      </div>
+                  <div>
+                    <div className="flex justify-between text-zinc-700 font-medium">
+                      <span>Rent change (monthly)</span>
+                      <span>{currency}{simRentDelta}</span>
+                    </div>
+                    <InputRange
+                      min={-600}
+                      max={600}
+                      step={50}
+                      value={simRentDelta}
+                      onValue={setSimRentDelta}
+                      className="w-full accent-amber-600"
+                    />
+                  </div>
 
-      <div>
-        <div className="flex justify-between text-zinc-700 font-medium">
-          <span>Rent change (monthly)</span>
-          <span>{currency}{simRentDelta}</span>
-        </div>
-        <InputRange
-          min={-600}
-          max={600}
-          step={50}
-          value={simRentDelta}
-          onValue={setSimRentDelta}
-          className="w-full accent-amber-600"
-        />
-      </div>
+                  <div>
+                    <div className="flex justify-between text-zinc-700 font-medium">
+                      <span>Income change (monthly)</span>
+                      <span>{currency}{simIncomeDelta}</span>
+                    </div>
+                    <InputRange
+                      min={-500}
+                      max={1500}
+                      step={50}
+                      value={simIncomeDelta}
+                      onValue={setSimIncomeDelta}
+                      className="w-full accent-amber-600"
+                    />
+                  </div>
+                </div>
 
-      <div>
-        <div className="flex justify-between text-zinc-700 font-medium">
-          <span>Income change (monthly)</span>
-          <span>{currency}{simIncomeDelta}</span>
-        </div>
-        <InputRange
-          min={-500}
-          max={1500}
-          step={50}
-          value={simIncomeDelta}
-          onValue={setSimIncomeDelta}
-          className="w-full accent-amber-600"
-        />
-      </div>
-    </div>
+                {/* Results box */}
+                <div className="mt-5 rounded-xl border border-amber-300 bg-white/70 backdrop-blur p-3 text-sm space-y-2 shadow-inner">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-600 font-medium">Before (baseline)</span>
+                    <span className="font-medium text-zinc-800">
+                      {currency}{Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}{baselineFreedom.toFixed(2)}/hr
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-600 font-medium">After (with changes)</span>
+                    <span className="font-semibold text-amber-800">
+                      {currency}{Math.max(0, simLeftover).toLocaleString()} / mo · {currency}{simFreedom.toFixed(2)}/hr
+                    </span>
+                  </div>
 
-    {/* Results box */}
-    <div className="mt-5 rounded-xl border border-amber-300 bg-white/70 backdrop-blur p-3 text-sm space-y-2 shadow-inner">
-      <div className="flex items-center justify-between">
-        <span className="text-zinc-600 font-medium">Before (baseline)</span>
-        <span className="font-medium text-zinc-800">
-          {currency}{Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}{baselineFreedom.toFixed(2)}/hr
-        </span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-zinc-600 font-medium">After (with changes)</span>
-        <span className="font-semibold text-amber-800">
-          {currency}{Math.max(0, simLeftover).toLocaleString()} / mo · {currency}{simFreedom.toFixed(2)}/hr
-        </span>
-      </div>
+                  <div
+                    className={`flex items-center justify-between ${
+                      simDelta >= 0 ? "text-emerald-700" : "text-rose-700"
+                    }`}
+                  >
+                    <span className="font-medium">Difference</span>
+                    <span className="font-semibold">
+                      {simDelta >= 0 ? "+" : ""}
+                      {currency}{simDelta.toLocaleString()} / mo ·{" "}
+                      {simDeltaPerHour >= 0 ? "+" : ""}
+                      {currency}{simDeltaPerHour.toFixed(2)}/hr
+                    </span>
+                  </div>
 
-      <div
-        className={`flex items-center justify-between ${
-          simDelta >= 0 ? "text-emerald-700" : "text-rose-700"
-        }`}
-      >
-        <span className="font-medium">Difference</span>
-        <span className="font-semibold">
-          {simDelta >= 0 ? "+" : ""}
-          {currency}{simDelta.toLocaleString()} / mo ·{" "}
-          {simDeltaPerHour >= 0 ? "+" : ""}
-          {currency}{simDeltaPerHour.toFixed(2)}/hr
-        </span>
-      </div>
-
-      <div className="text-xs text-zinc-600 pt-1">
-        Plain English: You’d keep{" "}
-        <span className="font-medium text-amber-700">
-          {simDelta >= 0
-            ? `${currency}${simDelta.toLocaleString()} more`
-            : `${currency}${Math.abs(simDelta).toLocaleString()} less`}
-        </span>{" "}
-        each month with the sliders set above.
-      </div>
-      <div className="text-[11px] text-zinc-500">
-        (Only the three sliders affect this. All your other inputs stay the same.)
-      </div>
-    </div>
-  </CardBody>
-</Card>
-
-
+                  <div className="text-xs text-zinc-600 pt-1">
+                    Plain English: You’d keep{" "}
+                    <span className="font-medium text-amber-700">
+                      {simDelta >= 0
+                        ? `${currency}${simDelta.toLocaleString()} more`
+                        : `${currency}${Math.abs(simDelta).toLocaleString()} less`}
+                    </span>{" "}
+                    each month with the sliders set above.
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    (Only the three sliders affect this. All your other inputs stay the same.)
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
 
             <Card>
               <CardBody>
                 <div className="text-sm">Your chosen month (with your commute & drivers)</div>
                 <div className="text-2xl font-semibold mt-1">
-  Kept: <Money value={leftover} currency={currency} />
-</div>
-<div className="text-sm mt-1">
-  {effectivePerHour >= 0 ? (
-    <>
-      After every hour you spend working (including commuting), you truly keep about{" "}
-      <strong>{currency}{effectivePerHour.toFixed(2)}</strong> of disposable money.
-    </>
-  ) : (
-    <span className="text-rose-700">
-      You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
-    </span>
-  )}
-</div>
+                  Kept: <Money value={leftover} currency={currency} />
+                </div>
+                <div className="text-sm mt-1">
+                  {effectivePerHour >= 0 ? (
+                    <>
+                      After every hour you spend working (including commuting), you truly keep about{" "}
+                      <strong>{currency}{effectivePerHour.toFixed(2)}</strong> of disposable money.
+                    </>
+                  ) : (
+                    <span className="text-rose-700">
+                      You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+                    </span>
+                  )}
+                </div>
 
                 <div className="text-xs text-zinc-500 mt-2">
                   Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
