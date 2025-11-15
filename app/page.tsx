@@ -653,29 +653,34 @@ function CityComparisonCard({
   <div className="w-full max-w-xs space-y-2">
     {/* Primary CTA */}
     <a
-      href="https://www.flatio.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center justify-between w-full rounded-full bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 hover:shadow-md transition"
-    >
-      <span>See long-stay rentals in {city.shortLabel}</span>
-      <span className="text-[10px] opacity-80 transform transition-transform group-hover:translate-x-0.5">
-        ↗
-      </span>
-    </a>
+  href="https://www.flatio.com/"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="group flex items-center justify-between w-full rounded-full 
+             bg-[#1D2B53] px-4 py-2.5 text-xs font-semibold text-white 
+             shadow-sm hover:bg-[#16213E] hover:shadow-md transition"
+>
+  <span className="text-white">See long-stay rentals in {city.shortLabel}</span>
+  <span className="text-[10px] text-white opacity-80 transform transition-transform group-hover:translate-x-0.5">
+    ↗
+  </span>
+</a>
 
     {/* Secondary CTA */}
     <a
-      href="https://wise.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center justify-between w-full rounded-full border border-emerald-500 bg-white/90 px-4 py-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition"
-    >
-      <span>Open a multi-currency account</span>
-      <span className="text-[10px] opacity-70 transform transition-transform group-hover:translate-x-0.5">
-        ↗
-      </span>
-    </a>
+  href="https://wise.com/"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="group flex items-center justify-between w-full rounded-full 
+             border border-[#1D2B53] bg-white/90 px-4 py-2.5 text-xs 
+             font-semibold text-[#1D2B53] hover:bg-blue-50 transition"
+>
+  <span className="text-[#1D2B53]">Open a multi-currency account</span>
+  <span className="text-[10px] text-[#1D2B53] opacity-70 transform transition-transform group-hover:translate-x-0.5">
+    ↗
+  </span>
+</a>
+
   </div>
 </div>
 
