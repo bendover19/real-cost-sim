@@ -10,6 +10,7 @@ import html2canvas from "html2canvas";
    - Sections render once and are hidden/shown (no remounts)
    - Chart toggle for Typical local month vs Your month
    - Checkbox to include/exclude Other income in chart total
+   - Commute time slider powers both commute cost & time logic
    ============================================================ */
 
 const INGEST_PATH = "/api/ingest";
@@ -421,6 +422,7 @@ function CityComparisonCard({
   savingsMonthly,
   hasKids,
   transportMode,
+  commuteMinsPerDay,
 }: {
   currency: string;
   netMonthly: number;
@@ -437,6 +439,7 @@ function CityComparisonCard({
   savingsMonthly: number;
   hasKids: boolean;
   transportMode: "pt" | "drive" | "remote" | "walk";
+  commuteMinsPerDay: number;
 }) {
   const [cityId, setCityId] = React.useState<RelocationCityId>("lisbon");
 
@@ -469,13 +472,7 @@ function CityComparisonCard({
   const deltaCommuteMoney = commuteMonthly - newCommute;
   const deltaChildcare = dependentsMonthly - newDependents;
 
-  const baseCommuteMinutesByMode: Record<"pt" | "drive" | "remote" | "walk", number> = {
-    pt: 70,
-    drive: 60,
-    walk: 20,
-    remote: 0,
-  };
-  const currentCommuteMins = baseCommuteMinutesByMode[transportMode];
+  const currentCommuteMins = transportMode === "remote" ? 0 : commuteMinsPerDay;
   const commuteMinutesDiff = Math.max(0, currentCommuteMins - city.avgCommuteMinutes);
   const commuteHoursSavedPerMonth = Math.round((commuteMinutesDiff * 22) / 60); // ~22 workdays
 
@@ -623,7 +620,7 @@ function CityComparisonCard({
               <span className="font-semibold text-emerald-700">
                 {commuteHoursSavedPerMonth} fewer hours
               </span>{" "}
-              spent commuting each month, based on typical daily commute times.
+              spent commuting each month, based on your commute vs typical for {city.shortLabel}.
             </div>
           )}
         </div>
@@ -646,44 +643,42 @@ function CityComparisonCard({
           </div>
 
           <div className="flex flex-col items-start md:items-end gap-2 w-full md:w-auto">
-  <div className="text-[11px] text-zinc-500">
-    Curious about actually making {city.shortLabel} work?
-  </div>
+            <div className="text-[11px] text-zinc-500">
+              Curious about actually making {city.shortLabel} work?
+            </div>
 
-  <div className="w-full max-w-xs space-y-2">
-    {/* Primary CTA */}
-    <a
-  href="https://www.flatio.com/"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="group flex items-center justify-between w-full rounded-full 
+            <div className="w-full max-w-xs space-y-2">
+              {/* Primary CTA */}
+              <a
+                href="https://www.flatio.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between w-full rounded-full 
              bg-[#1D2B53] px-4 py-2.5 text-xs font-semibold text-white 
              shadow-sm hover:bg-[#16213E] hover:shadow-md transition"
->
-  <span className="text-white">See long-stay rentals in {city.shortLabel}</span>
-  <span className="text-[10px] text-white opacity-80 transform transition-transform group-hover:translate-x-0.5">
-    ↗
-  </span>
-</a>
+              >
+                <span className="text-white">See long-stay rentals in {city.shortLabel}</span>
+                <span className="text-[10px] text-white opacity-80 transform transition-transform group-hover:translate-x-0.5">
+                  ↗
+                </span>
+              </a>
 
-    {/* Secondary CTA */}
-    <a
-  href="https://wise.com/"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="group flex items-center justify-between w-full rounded-full 
+              {/* Secondary CTA */}
+              <a
+                href="https://wise.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between w-full rounded-full 
              border border-[#1D2B53] bg-white/90 px-4 py-2.5 text-xs 
              font-semibold text-[#1D2B53] hover:bg-blue-50 transition"
->
-  <span className="text-[#1D2B53]">Open a multi-currency account</span>
-  <span className="text-[10px] text-[#1D2B53] opacity-70 transform transition-transform group-hover:translate-x-0.5">
-    ↗
-  </span>
-</a>
-
-  </div>
-</div>
-
+              >
+                <span className="text-[#1D2B53]">Open a multi-currency account</span>
+                <span className="text-[10px] text-[#1D2B53] opacity-70 transform transition-transform group-hover:translate-x-0.5">
+                  ↗
+                </span>
+              </a>
+            </div>
+          </div>
         </div>
       </CardBody>
     </Card>
@@ -765,6 +760,9 @@ export default function Page() {
   const [transportMode, setTransportMode] = useState<"pt" | "drive" | "remote" | "walk">("pt");
   const [wfhUtilities, setWfhUtilities] = useState<number>(0);
 
+  // NEW: Commute minutes per working day (there & back)
+  const [commuteMinsPerDay, setCommuteMinsPerDay] = useState<number>(60);
+
   // NEW: Commute override
   const [commuteOverrideStr, setCommuteOverrideStr] = useState<string>("");
   const commuteOverride = useMemo(() => toNumberSafe(commuteOverrideStr), [commuteOverrideStr]);
@@ -800,11 +798,27 @@ export default function Page() {
   const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
 
   // Derived
-  const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
   const urb = URBANICITY[urbanicity];
   const ctx = COMMUTE_CTX[commuteCtx];
   const rentMul = urb.rentMul;
   const commuteMul = urb.commuteMul * ctx.commuteMul;
+
+  const officeDaysPerWeek = 5;
+
+  const commuteHoursPerWeek = useMemo(
+    () =>
+      transportMode === "remote" || transportMode === "walk"
+        ? 0
+        : (commuteMinsPerDay * officeDaysPerWeek) / 60,
+    [transportMode, commuteMinsPerDay, officeDaysPerWeek]
+  );
+
+  const workHoursPerWeek = useMemo(
+    () => Math.max(0, hoursWeek - commuteHoursPerWeek),
+    [hoursWeek, commuteHoursPerWeek]
+  );
+
+  const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
 
   const baseNetFromPrimary = useMemo(
     () => (isGross ? approximateFromGross(region, takeHome) : takeHome),
@@ -839,9 +853,18 @@ export default function Page() {
   const commuteMonthly = useMemo(() => {
     if (transportMode === "remote" || transportMode === "walk") return 0;
     if (commuteOverride > 0) return commuteOverride;
-    const base = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
-    return Math.round(base * commuteMul);
-  }, [transportMode, regionData, commuteMul, commuteOverride]);
+
+    // 1) Base estimate for a “typical” 60 min/day commute in this region & mode
+    const baseTypical = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
+    const estimatedForContext = Math.round(baseTypical * commuteMul);
+
+    // 2) Scale with actual minutes per day
+    const typicalMinsPerDay = 60;
+    const ratio =
+      typicalMinsPerDay > 0 ? commuteMinsPerDay / typicalMinsPerDay : 1;
+
+    return Math.round(estimatedForContext * ratio);
+  }, [transportMode, regionData, commuteMul, commuteOverride, commuteMinsPerDay]);
 
   const driversSum = useMemo(
     () => (Object.keys(drivers) as DriverKey[]).reduce((s, k) => s + drivers[k], 0),
@@ -938,18 +961,28 @@ export default function Page() {
   }, [transportMode, chartUseBaseline, chartToggleTouched]);
 
   // --- Challenge-mode derived values ---
-  const effectiveBaseCommute = useMemo(() => {
-    if (transportMode === "remote" || transportMode === "walk") return 0;
-    const base = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
-    return Math.round(base * commuteMul);
-  }, [transportMode, regionData, commuteMul]);
+  // Base commute cost for "0 remote days" in money terms
+  const effectiveBaseCommute = useMemo(() => commuteMonthly, [commuteMonthly]);
 
   const simCommute = useMemo(
-    () => Math.max(0, Math.round(effectiveBaseCommute * (1 - simRemoteDays / 5))),
-    [effectiveBaseCommute, simRemoteDays]
+    () => Math.max(0, Math.round(effectiveBaseCommute * (1 - simRemoteDays / officeDaysPerWeek))),
+    [effectiveBaseCommute, simRemoteDays, officeDaysPerWeek]
   );
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
+
+  // NEW: simulate hours when remote days reduce commute time
+  const simHoursWeek = useMemo(() => {
+    if (effectiveBaseCommute === 0 || simRemoteDays <= 0) return hoursWeek;
+    const savedPerWeek = (simRemoteDays / officeDaysPerWeek) * commuteHoursPerWeek;
+    return Math.max(1, hoursWeek - savedPerWeek);
+  }, [effectiveBaseCommute, simRemoteDays, hoursWeek, officeDaysPerWeek, commuteHoursPerWeek]);
+
+  const simHoursPerMonth = useMemo(
+    () => Math.round(simHoursWeek * 4.3),
+    [simHoursWeek]
+  );
+
   const simLeftover = useMemo(
     () =>
       Math.round(
@@ -966,9 +999,9 @@ export default function Page() {
     [simNet, simHousing, simCommute, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
   const simFreedom = useMemo(() => {
-    const per = simLeftover / Math.max(1, hoursPerMonth);
+    const per = simLeftover / Math.max(1, simHoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
-  }, [simLeftover, hoursPerMonth]);
+  }, [simLeftover, simHoursPerMonth]);
   const simDelta = useMemo(() => simLeftover - baselineLeftover, [simLeftover, baselineLeftover]);
   const simDeltaPerHour = useMemo(() => simFreedom - baselineFreedom, [simFreedom, baselineFreedom]);
 
@@ -1076,6 +1109,7 @@ export default function Page() {
   const takeHomeWeird = (!isGross && takeHome > 20000) || (isGross && takeHome > 30000);
   const housingWeird = housingTouched && housing < 300 && !(["family", "share"] as Household[]).includes(household);
   const hoursWeird = hoursWeek < 30 || hoursWeek > 80;
+  const hoursSplitWeird = commuteHoursPerWeek > hoursWeek;
 
   const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
@@ -1357,6 +1391,33 @@ export default function Page() {
               </button>
             </div>
 
+            {transportMode !== "remote" && (
+              <div className="mt-3">
+                <label className="text-sm flex justify-between items-baseline">
+                  <span>Time spent commuting on a working day (there & back)</span>
+                  <span className="text-xs text-zinc-600">
+                    ~{commuteMinsPerDay} min/day ≈ {commuteHoursPerWeek.toFixed(1)} h/week
+                  </span>
+                </label>
+                <InputRange
+                  min={0}
+                  max={180}
+                  step={5}
+                  value={commuteMinsPerDay}
+                  onValue={setCommuteMinsPerDay}
+                  className="w-full mt-2"
+                />
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  Used to calculate how much of your time and money goes into the commute.
+                </div>
+                {hoursSplitWeird && (
+                  <div className="text-[11px] text-amber-600 mt-1">
+                    Your commute time is higher than your total work+commute hours. One of these might be off.
+                  </div>
+                )}
+              </div>
+            )}
+
             {transportMode === "remote" && (
               <div className="mt-2">
                 <label className="text-sm flex justify-between items-baseline">
@@ -1379,7 +1440,7 @@ export default function Page() {
               </div>
             )}
 
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="text-xs text-zinc-500 mt-2">
               Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
               {commuteOverride > 0 && " (using your override)"}
             </div>
@@ -1804,6 +1865,7 @@ export default function Page() {
               savingsMonthly={savingsMonthly}
               hasKids={(household === "partnerKids" || household === "singleParent") && childrenCount > 0}
               transportMode={transportMode}
+              commuteMinsPerDay={commuteMinsPerDay}
             />
 
             {imageUrl && (
@@ -1947,7 +2009,7 @@ export default function Page() {
                     each month with the sliders set above.
                   </div>
                   <div className="text-[11px] text-zinc-500">
-                    (Only the three sliders affect this. All your other inputs stay the same.)
+                    (Only the three sliders affect this. All your other inputs stay the same — including how you split work vs commute time.)
                   </div>
                 </div>
               </CardBody>
@@ -2000,6 +2062,13 @@ export default function Page() {
                 </div>
                 <div className="text-xs text-zinc-500 mt-2">
                   Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  {transportMode === "remote" || transportMode === "walk"
+                    ? "Assuming no daily commute for this setup."
+                    : `Assuming about ${officeDaysPerWeek} days/week × ${commuteMinsPerDay} minutes/day ≈ ${commuteHoursPerWeek.toFixed(
+                        1
+                      )} h/week spent commuting.`}
                 </div>
               </CardBody>
             </Card>
