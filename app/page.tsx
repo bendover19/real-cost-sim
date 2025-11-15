@@ -305,7 +305,7 @@ function computeHealthcare(regionId: RegionId, plan: HealthPlanUS | null, overri
   return Math.max(0, override > 0 ? override : base);
 }
 function computeSavingsFromRate(netMonthly: number, ratePct: number) {
-  return Math.round((netMonthly * Math.max(0, Math.min(20, ratePct))) / 100);
+  return Math.round((netMonthly * Math.max(0, Math.min(100, ratePct))) / 100);
 }
 function toNumberSafe(v: string): number {
   if ((v as any)?.trim) {
@@ -1458,7 +1458,7 @@ export default function Page() {
             <label className="text-sm">Savings / pension rate</label>
             <InputRange
               min={0}
-              max={20}
+              max={100}
               step={1}
               value={savingsRate}
               onValue={setSavingsRate}
