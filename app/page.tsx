@@ -1296,47 +1296,70 @@ export default function Page() {
             )}
           </div>
 
-          <div>
-            <label className="text-sm">Getting to work</label>
-            <div className="flex gap-2 flex-wrap mt-2">
-              <button
-                onClick={() => setTransportMode("pt")}
-                className={`px-3 py-2 rounded-full border text-sm ${
-                  transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-                }`}
-              >
-                Public transport
-              </button>
-              <button
-                onClick={() => setTransportMode("drive")}
-                className={`px-3 py-2 rounded-full border text-sm ${
-                  transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-                }`}
-              >
-                Drive / taxi
-              </button>
-              <button
-                onClick={() => setTransportMode("walk")}
-                className={`px-3 py-2 rounded-full border text-sm ${
-                  transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-                }`}
-              >
-                Walk / Bike
-              </button>
-              <button
-                onClick={() => setTransportMode("remote")}
-                className={`px-3 py-2 rounded-full border text-sm ${
-                  transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-                }`}
-              >
-                Remote / no commute
-              </button>
-            </div>
-            WFH utilities uplift
-            <div className="text-xs text-zinc-500 mt-1">
-              Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
-            </div>
-          </div>
+<div>
+  <label className="text-sm">Getting to work</label>
+  <div className="flex gap-2 flex-wrap mt-2">
+    <button
+      onClick={() => setTransportMode("pt")}
+      className={`px-3 py-2 rounded-full border text-sm ${
+        transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+      }`}
+    >
+      Public transport
+    </button>
+    <button
+      onClick={() => setTransportMode("drive")}
+      className={`px-3 py-2 rounded-full border text-sm ${
+        transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+      }`}
+    >
+      Drive / taxi
+    </button>
+    <button
+      onClick={() => setTransportMode("walk")}
+      className={`px-3 py-2 rounded-full border text-sm ${
+        transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+      }`}
+    >
+      Walk / Bike
+    </button>
+    <button
+      onClick={() => setTransportMode("remote")}
+      className={`px-3 py-2 rounded-full border text-sm ${
+        transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+      }`}
+    >
+      Remote / no commute
+    </button>
+  </div>
+
+  {transportMode === "remote" && (
+    <div className="mt-2">
+      <label className="text-sm flex justify-between items-baseline">
+        <span>WFH utilities uplift</span>
+        <span className="text-xs text-zinc-600">
+          <Money value={wfhUtilities} currency={currency} /> / month
+        </span>
+      </label>
+      <InputRange
+        min={0}
+        max={80}
+        step={5}
+        value={wfhUtilities}
+        onValue={setWfhUtilities}
+        className="w-full"
+      />
+      <div className="text-[11px] text-zinc-500">
+        Covers extra heating/electric/internet when working from home.
+      </div>
+    </div>
+  )}
+
+  <div className="text-xs text-zinc-500 mt-1">
+    Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
+  </div>
+</div>
+
 
           <div>
             <label className="text-sm">Home & kids</label>
