@@ -645,26 +645,40 @@ function CityComparisonCard({
             </div>
           </div>
 
-          <div className="flex flex-col items-start md:items-end gap-1">
-            <div className="text-[11px] text-zinc-500">
-              Curious about actually making {city.shortLabel} work?
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {/* TODO: replace with your affiliate URLs */}
-              <a
-                href="https://www.flatio.com/"
-                className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition"
-              >
-                See long-stay rentals in {city.shortLabel}
-              </a>
-              <a
-                href="https://wise.com/"
-                className="px-3 py-1.5 rounded-full border border-emerald-500 text-emerald-700 bg-white text-xs font-medium hover:bg-emerald-50 transition"
-              >
-                Open a multi-currency account
-              </a>
-            </div>
-          </div>
+          <div className="flex flex-col items-start md:items-end gap-2 w-full md:w-auto">
+  <div className="text-[11px] text-zinc-500">
+    Curious about actually making {city.shortLabel} work?
+  </div>
+
+  <div className="w-full max-w-xs space-y-2">
+    {/* Primary CTA */}
+    <a
+      href="https://www.flatio.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center justify-between w-full rounded-full bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 hover:shadow-md transition"
+    >
+      <span>See long-stay rentals in {city.shortLabel}</span>
+      <span className="text-[10px] opacity-80 transform transition-transform group-hover:translate-x-0.5">
+        ↗
+      </span>
+    </a>
+
+    {/* Secondary CTA */}
+    <a
+      href="https://wise.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center justify-between w-full rounded-full border border-emerald-500 bg-white/90 px-4 py-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition"
+    >
+      <span>Open a multi-currency account</span>
+      <span className="text-[10px] opacity-70 transform transition-transform group-hover:translate-x-0.5">
+        ↗
+      </span>
+    </a>
+  </div>
+</div>
+
         </div>
       </CardBody>
     </Card>
