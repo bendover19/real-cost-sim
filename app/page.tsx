@@ -650,7 +650,7 @@ function CityComparisonCard({
               Curious about actually making {city.shortLabel} work?
             </div>
             <div className="flex flex-wrap gap-2">
-              {/* TODO: replace # with real affiliate URLs */}
+              {/* TODO: replace with your affiliate URLs */}
               <a
                 href="https://www.flatio.com/"
                 className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition"
@@ -746,6 +746,10 @@ export default function Page() {
   const [transportMode, setTransportMode] = useState<"pt" | "drive" | "remote" | "walk">("pt");
   const [wfhUtilities, setWfhUtilities] = useState<number>(0);
 
+  // NEW: Commute override
+  const [commuteOverrideStr, setCommuteOverrideStr] = useState<string>("");
+  const commuteOverride = useMemo(() => toNumberSafe(commuteOverrideStr), [commuteOverrideStr]);
+
   const [debtMonthly, setDebtMonthly] = useState<number>(150);
   const [studentLoan, setStudentLoan] = useState<number>(0);
 
@@ -815,9 +819,10 @@ export default function Page() {
 
   const commuteMonthly = useMemo(() => {
     if (transportMode === "remote" || transportMode === "walk") return 0;
+    if (commuteOverride > 0) return commuteOverride;
     const base = transportMode === "pt" ? regionData.commutePT : regionData.commuteDrive;
     return Math.round(base * commuteMul);
-  }, [transportMode, regionData, commuteMul]);
+  }, [transportMode, regionData, commuteMul, commuteOverride]);
 
   const driversSum = useMemo(
     () => (Object.keys(drivers) as DriverKey[]).reduce((s, k) => s + drivers[k], 0),
@@ -1296,70 +1301,94 @@ export default function Page() {
             )}
           </div>
 
-<div>
-  <label className="text-sm">Getting to work</label>
-  <div className="flex gap-2 flex-wrap mt-2">
-    <button
-      onClick={() => setTransportMode("pt")}
-      className={`px-3 py-2 rounded-full border text-sm ${
-        transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-      }`}
-    >
-      Public transport
-    </button>
-    <button
-      onClick={() => setTransportMode("drive")}
-      className={`px-3 py-2 rounded-full border text-sm ${
-        transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-      }`}
-    >
-      Drive / taxi
-    </button>
-    <button
-      onClick={() => setTransportMode("walk")}
-      className={`px-3 py-2 rounded-full border text-sm ${
-        transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-      }`}
-    >
-      Walk / Bike
-    </button>
-    <button
-      onClick={() => setTransportMode("remote")}
-      className={`px-3 py-2 rounded-full border text-sm ${
-        transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
-      }`}
-    >
-      Remote / no commute
-    </button>
-  </div>
+          <div>
+            <label className="text-sm">Getting to work</label>
+            <div className="flex gap-2 flex-wrap mt-2">
+              <button
+                onClick={() => setTransportMode("pt")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Public transport
+              </button>
+              <button
+                onClick={() => setTransportMode("drive")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Drive / taxi
+              </button>
+              <button
+                onClick={() => setTransportMode("walk")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Walk / Bike
+              </button>
+              <button
+                onClick={() => setTransportMode("remote")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Remote / no commute
+              </button>
+            </div>
 
-  {transportMode === "remote" && (
-    <div className="mt-2">
-      <label className="text-sm flex justify-between items-baseline">
-        <span>WFH utilities uplift</span>
-        <span className="text-xs text-zinc-600">
-          <Money value={wfhUtilities} currency={currency} /> / month
-        </span>
-      </label>
-      <InputRange
-        min={0}
-        max={80}
-        step={5}
-        value={wfhUtilities}
-        onValue={setWfhUtilities}
-        className="w-full"
-      />
-      <div className="text-[11px] text-zinc-500">
-        Covers extra heating/electric/internet when working from home.
-      </div>
-    </div>
-  )}
+            {transportMode === "remote" && (
+              <div className="mt-2">
+                <label className="text-sm flex justify-between items-baseline">
+                  <span>WFH utilities uplift</span>
+                  <span className="text-xs text-zinc-600">
+                    <Money value={wfhUtilities} currency={currency} /> / month
+                  </span>
+                </label>
+                <InputRange
+                  min={0}
+                  max={80}
+                  step={5}
+                  value={wfhUtilities}
+                  onValue={setWfhUtilities}
+                  className="w-full"
+                />
+                <div className="text-[11px] text-zinc-500">
+                  Covers extra heating/electric/internet when working from home.
+                </div>
+              </div>
+            )}
 
-  <div className="text-xs text-zinc-500 mt-1">
-    Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
-  </div>
-</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
+              {commuteOverride > 0 && " (using your override)"}
+            </div>
 
+            {transportMode !== "remote" && transportMode !== "walk" && (
+              <div className="mt-2">
+                <label className="text-[11px] text-zinc-600">
+                  If you know your real monthly commute cost, you can override it:
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-zinc-500 text-sm">{currency}</span>
+                  <StickyNumericInput
+                    id="commute-override"
+                    data-probe="commute-override"
+                    defaultValue={commuteOverrideStr}
+                    onValue={setCommuteOverrideStr}
+                    className="w-32 rounded-lg border p-1.5 bg-white text-sm"
+                    aria-label="Override commute cost"
+                  />
+                  {commuteOverride > 0 && (
+                    <span className="text-[11px] text-emerald-700">
+                      Using this instead of the estimate.
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="text-sm">Home & kids</label>
@@ -1957,22 +1986,21 @@ export default function Page() {
             </Card>
 
             <Card>
-  <CardBody>
-    <div className="text-sm">Maintenance totals</div>
-    <div className="text-xs text-zinc-500 mt-1">
-      Drivers: <Money value={driversSum} currency={currency} /> •
-      Variable spends: <Money value={variableSum} currency={currency} /> •
-      Bills/utilities: <Money value={billsUtilities} currency={currency} />
-      {transportMode === "remote" && (
-        <>
-          {" "}
-          • WFH utilities uplift: <Money value={wfhUtilities} currency={currency} />
-        </>
-      )}
-    </div>
-  </CardBody>
-</Card>
-
+              <CardBody>
+                <div className="text-sm">Maintenance totals</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  Drivers: <Money value={driversSum} currency={currency} /> •
+                  Variable spends: <Money value={variableSum} currency={currency} /> •
+                  Bills/utilities: <Money value={billsUtilities} currency={currency} />
+                  {transportMode === "remote" && (
+                    <>
+                      {" "}
+                      • WFH utilities uplift: <Money value={wfhUtilities} currency={currency} />
+                    </>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
 
             {healthcareMonthly > 0 && (
               <Card>
