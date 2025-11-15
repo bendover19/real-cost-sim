@@ -152,6 +152,129 @@ const RENT_TABLE: Record<RegionId, Record<Household, number>> = {
   OTHER: { solo: 800, partner: 1100, partnerKids: 1300, singleParent: 900, share: 500, family: 0 },
 };
 
+// ---------- Relocation cities (approximate typical costs, GBP-equivalent) ----------
+type RelocationCityId =
+  | "lisbon"
+  | "bali"
+  | "mexico_city"
+  | "chiang_mai"
+  | "valencia"
+  | "istanbul"
+  | "melbourne"
+  | "tbilisi";
+
+interface RelocationCity {
+  id: RelocationCityId;
+  label: string;
+  shortLabel: string;
+  country: string;
+  rent: number;
+  childcare: number;
+  commute: number;
+  lifestyleScore: number;
+  remoteScore: number;
+  avgCommuteMinutes: number;
+}
+
+const RELOCATION_CITIES: RelocationCity[] = [
+  {
+    id: "lisbon",
+    label: "Lisbon (Portugal)",
+    shortLabel: "Lisbon",
+    country: "Portugal",
+    rent: 1100,
+    childcare: 350,
+    commute: 70,
+    lifestyleScore: 8,
+    remoteScore: 8,
+    avgCommuteMinutes: 50,
+  },
+  {
+    id: "bali",
+    label: "Bali",
+    shortLabel: "Bali",
+    country: "Indonesia",
+    rent: 750,
+    childcare: 220,
+    commute: 40,
+    lifestyleScore: 9,
+    remoteScore: 9,
+    avgCommuteMinutes: 30,
+  },
+  {
+    id: "mexico_city",
+    label: "Mexico City (Mexico)",
+    shortLabel: "Mexico City",
+    country: "Mexico",
+    rent: 900,
+    childcare: 280,
+    commute: 60,
+    lifestyleScore: 7,
+    remoteScore: 7,
+    avgCommuteMinutes: 60,
+  },
+  {
+    id: "chiang_mai",
+    label: "Chiang Mai (Thailand)",
+    shortLabel: "Chiang Mai",
+    country: "Thailand",
+    rent: 650,
+    childcare: 200,
+    commute: 35,
+    lifestyleScore: 9,
+    remoteScore: 8,
+    avgCommuteMinutes: 30,
+  },
+  {
+    id: "valencia",
+    label: "Valencia (Spain)",
+    shortLabel: "Valencia",
+    country: "Spain",
+    rent: 900,
+    childcare: 320,
+    commute: 55,
+    lifestyleScore: 8,
+    remoteScore: 7,
+    avgCommuteMinutes: 45,
+  },
+  {
+    id: "istanbul",
+    label: "Istanbul (Turkey)",
+    shortLabel: "Istanbul",
+    country: "Turkey",
+    rent: 750,
+    childcare: 230,
+    commute: 50,
+    lifestyleScore: 7,
+    remoteScore: 6,
+    avgCommuteMinutes: 55,
+  },
+  {
+    id: "melbourne",
+    label: "Melbourne (Australia)",
+    shortLabel: "Melbourne",
+    country: "Australia",
+    rent: 1650,
+    childcare: 400,
+    commute: 90,
+    lifestyleScore: 8,
+    remoteScore: 8,
+    avgCommuteMinutes: 70,
+  },
+  {
+    id: "tbilisi",
+    label: "Tbilisi (Georgia)",
+    shortLabel: "Tbilisi",
+    country: "Georgia",
+    rent: 650,
+    childcare: 210,
+    commute: 40,
+    lifestyleScore: 8,
+    remoteScore: 8,
+    avgCommuteMinutes: 35,
+  },
+];
+
 // ---------- Utils ----------
 function currencySymbol(regionId: RegionId) {
   const r = regions.find((rr) => rr.id === regionId);
@@ -213,9 +336,25 @@ const Money: React.FC<{ value: number; currency: string; clampZero?: boolean }> 
 
 // ---------- Chart ----------
 function BarChart({
-  currency, net, housing, commute, maintenance, dependents, healthcare, debt, savings,
+  currency,
+  net,
+  housing,
+  commute,
+  maintenance,
+  dependents,
+  healthcare,
+  debt,
+  savings,
 }: {
-  currency: string; net: number; housing: number; commute: number; maintenance: number; dependents: number; healthcare: number; debt: number; savings: number;
+  currency: string;
+  net: number;
+  housing: number;
+  commute: number;
+  maintenance: number;
+  dependents: number;
+  healthcare: number;
+  debt: number;
+  savings: number;
 }) {
   const safeNet = Math.max(1, net);
   const slices = [
@@ -232,25 +371,303 @@ function BarChart({
   return (
     <div className="space-y-2">
       <div className="w-full h-6 rounded-lg overflow-hidden bg-zinc-200">
-        <div className="h-6 bg-emerald-500 float-right" style={{ width: `${(left / safeNet) * 100}%` }} title={`Leftover ${currency}${left.toLocaleString()}`} />
+        <div
+          className="h-6 bg-emerald-500 float-right"
+          style={{ width: `${(left / safeNet) * 100}%` }}
+          title={`Leftover ${currency}${left.toLocaleString()}`}
+        />
         {slices.map((s) => (
-          <div key={s.label} className={`h-6 ${s.color} float-left`} style={{ width: `${(Math.max(0, s.value) / safeNet) * 100}%` }} title={`${s.label} ${currency}${Math.max(0, s.value).toLocaleString()}`} />
+          <div
+            key={s.label}
+            className={`h-6 ${s.color} float-left`}
+            style={{ width: `${(Math.max(0, s.value) / safeNet) * 100}%` }}
+            title={`${s.label} ${currency}${Math.max(0, s.value).toLocaleString()}`}
+          />
         ))}
       </div>
       <div className="flex flex-wrap gap-3 text-xs text-zinc-600">
         {slices.map((s) => (
           <div key={s.label} className="flex items-center gap-1">
             <span className={`inline-block w-3 h-3 rounded ${s.color}`} />
-            {s.label} {currency}{Math.max(0, s.value).toLocaleString()}
+            {s.label} {currency}
+            {Math.max(0, s.value).toLocaleString()}
           </div>
         ))}
         <div className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded bg-emerald-500" />
-          Leftover {currency}{Math.max(0, left).toLocaleString()}
+          Leftover {currency}
+          {Math.max(0, left).toLocaleString()}
         </div>
       </div>
       <div className="clear-both" />
     </div>
+  );
+}
+
+// ---------- City Comparison Card ----------
+function CityComparisonCard({
+  currency,
+  netMonthly,
+  leftover,
+  effectivePerHour,
+  housing,
+  dependentsMonthly,
+  commuteMonthly,
+  hoursPerMonth,
+  maintenanceSum,
+  healthcareMonthly,
+  debtMonthly,
+  studentLoan,
+  savingsMonthly,
+  hasKids,
+  transportMode,
+}: {
+  currency: string;
+  netMonthly: number;
+  leftover: number;
+  effectivePerHour: number;
+  housing: number;
+  dependentsMonthly: number;
+  commuteMonthly: number;
+  hoursPerMonth: number;
+  maintenanceSum: number;
+  healthcareMonthly: number;
+  debtMonthly: number;
+  studentLoan: number;
+  savingsMonthly: number;
+  hasKids: boolean;
+  transportMode: "pt" | "drive" | "remote" | "walk";
+}) {
+  const [cityId, setCityId] = React.useState<RelocationCityId>("lisbon");
+
+  if (netMonthly <= 0) return null;
+
+  const city = RELOCATION_CITIES.find((c) => c.id === cityId) ?? RELOCATION_CITIES[0];
+
+  // Assume income stays the same; environment changes.
+  const newHousing = city.rent;
+  const newDependents = hasKids ? city.childcare : 0;
+  const newCommute = transportMode === "remote" || transportMode === "walk" ? 0 : city.commute;
+
+  const relocLeftover = Math.round(
+    netMonthly -
+      newHousing -
+      newCommute -
+      maintenanceSum -
+      newDependents -
+      healthcareMonthly -
+      (debtMonthly + studentLoan) -
+      savingsMonthly
+  );
+
+  const relocFreedomRaw = relocLeftover / Math.max(1, hoursPerMonth);
+  const relocFreedom = Number.isFinite(relocFreedomRaw) ? Math.round(relocFreedomRaw * 100) / 100 : 0;
+
+  const deltaLeftover = relocLeftover - leftover;
+  const deltaFreedom = relocFreedom - effectivePerHour;
+  const deltaRent = housing - newHousing;
+  const deltaCommuteMoney = commuteMonthly - newCommute;
+  const deltaChildcare = dependentsMonthly - newDependents;
+
+  const baseCommuteMinutesByMode: Record<"pt" | "drive" | "remote" | "walk", number> = {
+    pt: 70,
+    drive: 60,
+    walk: 20,
+    remote: 0,
+  };
+  const currentCommuteMins = baseCommuteMinutesByMode[transportMode];
+  const commuteMinutesDiff = Math.max(0, currentCommuteMins - city.avgCommuteMinutes);
+  const commuteHoursSavedPerMonth = Math.round((commuteMinutesDiff * 22) / 60); // ~22 workdays
+
+  const fmtSign = (v: number, decimals = 0) => `${v >= 0 ? "+" : ""}${v.toFixed(decimals)}`;
+
+  const stars = (score: number) => "★".repeat(score) + "☆".repeat(10 - score);
+
+  return (
+    <Card className="bg-gradient-to-br from-sky-50 via-emerald-50 to-amber-50 border-sky-200 shadow-md">
+      <CardBody className="space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-sky-700 font-semibold flex items-center gap-2">
+              <span className="text-lg">🌍</span>
+              <span>What if you lived somewhere cheaper?</span>
+            </div>
+            <p className="text-xs text-zinc-600 mt-1 max-w-md">
+              We keep your income the same and swap in typical rent, childcare, and commute costs for another city.
+              See how much your <span className="font-semibold">hour of freedom</span> could change.
+            </p>
+          </div>
+          <div className="w-full sm:w-60">
+            <label className="text-xs text-zinc-700">Compare with</label>
+            <select
+              value={cityId}
+              onChange={(e) => setCityId(e.target.value as RelocationCityId)}
+              className="mt-1 w-full rounded-lg border px-3 py-2 bg-white text-sm"
+            >
+              {RELOCATION_CITIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Comparison grid */}
+        <div className="grid md:grid-cols-2 gap-4 text-sm">
+          <div className="rounded-xl border border-zinc-200 bg-white/80 p-3 space-y-2">
+            <div className="text-xs font-semibold text-zinc-500 uppercase">You now</div>
+            <div className="flex justify-between">
+              <span className="text-zinc-600">Housing</span>
+              <Money value={housing} currency={currency} />
+            </div>
+            {hasKids && (
+              <div className="flex justify-between">
+                <span className="text-zinc-600">Childcare</span>
+                <Money value={dependentsMonthly} currency={currency} />
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-zinc-600">Commute</span>
+              <Money value={commuteMonthly} currency={currency} />
+            </div>
+            <div className="border-t my-2" />
+            <div className="flex justify-between font-medium">
+              <span>Leftover</span>
+              <Money value={leftover} currency={currency} clampZero={false} />
+            </div>
+            <div className="flex justify-between text-xs text-zinc-600">
+              <span>Real hourly freedom pay</span>
+              <span>
+                {currency}
+                {effectivePerHour.toFixed(2)}/hr
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 space-y-2">
+            <div className="text-xs font-semibold text-emerald-700 uppercase">
+              If you lived in {city.shortLabel}
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-700">Typical housing</span>
+              <Money value={newHousing} currency={currency} />
+            </div>
+            {hasKids && (
+              <div className="flex justify-between">
+                <span className="text-zinc-700">Typical childcare</span>
+                <Money value={newDependents} currency={currency} />
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-zinc-700">Typical commute</span>
+              <Money value={newCommute} currency={currency} />
+            </div>
+            <div className="border-t my-2" />
+            <div className="flex justify-between font-semibold text-emerald-800">
+              <span>Estimated leftover</span>
+              <Money value={relocLeftover} currency={currency} clampZero={false} />
+            </div>
+            <div className="flex justify-between text-xs text-emerald-800">
+              <span>Estimated freedom pay</span>
+              <span>
+                {currency}
+                {relocFreedom.toFixed(2)}/hr
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Differences / deltas */}
+        <div className="rounded-xl border border-emerald-200 bg-white/80 p-3 text-xs sm:text-sm space-y-2">
+          <div className="flex flex-wrap gap-3 justify-between">
+            <div className="flex flex-col">
+              <span className="text-zinc-600">Monthly leftover</span>
+              <span className={deltaLeftover >= 0 ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                {deltaLeftover >= 0 ? "You’d keep " : "You’d lose "}
+                {currency}
+                {Math.abs(deltaLeftover).toLocaleString()} {deltaLeftover >= 0 ? "more" : "less"} / month
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-zinc-600">Freedom pay per hour</span>
+              <span className={deltaFreedom >= 0 ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                {fmtSign(deltaFreedom, 2)} {currency}/hr
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-zinc-600">Housing difference</span>
+              <span className={deltaRent >= 0 ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                {fmtSign(deltaRent)} {currency} / mo
+              </span>
+            </div>
+            {hasKids && (
+              <div className="flex flex-col">
+                <span className="text-zinc-600">Childcare difference</span>
+                <span className={deltaChildcare >= 0 ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                  {fmtSign(deltaChildcare)} {currency} / mo
+                </span>
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="text-zinc-600">Commute cost difference</span>
+              <span className={deltaCommuteMoney >= 0 ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                {fmtSign(deltaCommuteMoney)} {currency} / mo
+              </span>
+            </div>
+          </div>
+
+          {commuteHoursSavedPerMonth > 0 && (
+            <div className="pt-2 text-xs text-zinc-600">
+              Roughly{" "}
+              <span className="font-semibold text-emerald-700">
+                {commuteHoursSavedPerMonth} fewer hours
+              </span>{" "}
+              spent commuting each month, based on typical daily commute times.
+            </div>
+          )}
+        </div>
+
+        {/* Soft ratings + affiliate-friendly CTA */}
+        <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between text-xs sm:text-sm">
+          <div className="flex flex-wrap gap-3">
+            <div className="px-3 py-1.5 rounded-full bg-white/80 border border-zinc-200 flex items-center gap-2">
+              <span className="text-zinc-500">Lifestyle</span>
+              <span className="text-amber-600 font-semibold text-[11px] sm:text-xs">
+                {stars(city.lifestyleScore)}
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-full bg-white/80 border border-zinc-200 flex items-center gap-2">
+              <span className="text-zinc-500">Remote-work friendly</span>
+              <span className="text-emerald-600 font-semibold text-[11px] sm:text-xs">
+                {stars(city.remoteScore)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-start md:items-end gap-1">
+            <div className="text-[11px] text-zinc-500">
+              Curious about actually making {city.shortLabel} work?
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {/* TODO: replace # with real affiliate URLs */}
+              <a
+                href="https://www.flatio.com/"
+                className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition"
+              >
+                See long-stay rentals in {city.shortLabel}
+              </a>
+              <a
+                href="https://wise.com/"
+                className="px-3 py-1.5 rounded-full border border-emerald-500 text-emerald-700 bg-white text-xs font-medium hover:bg-emerald-50 transition"
+              >
+                Open a multi-currency account
+              </a>
+            </div>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
@@ -268,7 +685,9 @@ export default function Page() {
   const isSavingRef = React.useRef(false);
   const [hasBaselinePosted, setHasBaselinePosted] = useState(false);
 
-  useEffect(() => { setSessionId(getOrCreateSessionId()); }, []);
+  useEffect(() => {
+    setSessionId(getOrCreateSessionId());
+  }, []);
 
   // UTM / A/B cookie
   useEffect(() => {
@@ -277,10 +696,14 @@ export default function Page() {
       const utm = url.searchParams.get("utm_source") || url.searchParams.get("ref");
       if (utm) setLandSource(utm);
       const params = new URLSearchParams(url.search);
-      const qCity = params.get("city"); if (qCity) setCityName(qCity);
-      const qRegion = params.get("region") as RegionId | null; if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
-      const qUrban = params.get("urban") as Urbanicity | null; if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
-      const qCtx = params.get("ctx") as CommuteContext | null; if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
+      const qCity = params.get("city");
+      if (qCity) setCityName(qCity);
+      const qRegion = params.get("region") as RegionId | null;
+      if (qRegion && regions.find((r) => r.id === qRegion)) setRegion(qRegion);
+      const qUrban = params.get("urban") as Urbanicity | null;
+      if (qUrban && URBANICITY[qUrban]) setUrbanicity(qUrban);
+      const qCtx = params.get("ctx") as CommuteContext | null;
+      if (qCtx && COMMUTE_CTX[qCtx]) setCommuteCtx(qCtx);
     } catch {}
     try {
       const existing = document.cookie.match(/rcs_ab=([AB])/);
@@ -396,15 +819,30 @@ export default function Page() {
     return Math.round(base * commuteMul);
   }, [transportMode, regionData, commuteMul]);
 
-  const driversSum = useMemo(() => (Object.keys(drivers) as DriverKey[]).reduce((s, k) => s + drivers[k], 0), [drivers]);
+  const driversSum = useMemo(
+    () => (Object.keys(drivers) as DriverKey[]).reduce((s, k) => s + drivers[k], 0),
+    [drivers]
+  );
   const variableSum = useMemo(() => spends.pet + spends.therapy + spends.supportOthers + spends.health, [spends]);
   const billsUtilities = useMemo(
-    () => (billsIncluded ? 0 : Math.round((region === "US" ? 180 : region === "UK" ? 130 : 120) * (urbanicity === "inner" ? 1.15 : 1))),
+    () =>
+      billsIncluded
+        ? 0
+        : Math.round((region === "US" ? 180 : region === "UK" ? 130 : 120) * (urbanicity === "inner" ? 1.15 : 1)),
     [billsIncluded, region, urbanicity]
   );
-  const dependentsMonthly = useMemo(() => childCostPreset(region, childrenCount, childrenAge), [region, childrenCount, childrenAge]);
-  const healthcareMonthly = useMemo(() => computeHealthcare(region, usHealthPlan, usHealthcareOverride), [region, usHealthPlan, usHealthcareOverride]);
-  const savingsMonthly = useMemo(() => computeSavingsFromRate(netMonthly, savingsRate), [netMonthly, savingsRate]);
+  const dependentsMonthly = useMemo(
+    () => childCostPreset(region, childrenCount, childrenAge),
+    [region, childrenCount, childrenAge]
+  );
+  const healthcareMonthly = useMemo(
+    () => computeHealthcare(region, usHealthPlan, usHealthcareOverride),
+    [region, usHealthPlan, usHealthcareOverride]
+  );
+  const savingsMonthly = useMemo(
+    () => computeSavingsFromRate(netMonthly, savingsRate),
+    [netMonthly, savingsRate]
+  );
 
   const maintenanceSum = useMemo(
     () => driversSum + variableSum + billsUtilities + (transportMode === "remote" ? wfhUtilities : 0),
@@ -412,21 +850,55 @@ export default function Page() {
   );
 
   const leftover = useMemo(
-    () => Math.round(netMonthly - housing - commuteMonthly - maintenanceSum - dependentsMonthly - healthcareMonthly - debtMonthly - studentLoan - savingsMonthly),
+    () =>
+      Math.round(
+        netMonthly -
+          housing -
+          commuteMonthly -
+          maintenanceSum -
+          dependentsMonthly -
+          healthcareMonthly -
+          debtMonthly -
+          studentLoan -
+          savingsMonthly
+      ),
     [netMonthly, housing, commuteMonthly, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
   const effectivePerHour = useMemo(() => {
     const per = leftover / Math.max(1, hoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [leftover, hoursPerMonth]);
-  const maintenancePct = useMemo(() => Math.max(0, Math.round((maintenanceSum / Math.max(1, netMonthly)) * 100)), [maintenanceSum, netMonthly]);
+  const maintenancePct = useMemo(
+    () => Math.max(0, Math.round((maintenanceSum / Math.max(1, netMonthly)) * 100)),
+    [maintenanceSum, netMonthly]
+  );
 
   // Baseline (PT + Typical drivers)
-  const baselineCommute = useMemo(() => Math.round(regionData.commutePT * commuteMul), [regionData, commuteMul]);
-  const typicalDriversSum = useMemo(() => (Object.keys(DRIVER_TYPICAL) as DriverKey[]).reduce((s, k) => s + DRIVER_TYPICAL[k], 0), []);
-  const baselineMaintenance = useMemo(() => typicalDriversSum + variableSum + billsUtilities, [typicalDriversSum, variableSum, billsUtilities]);
+  const baselineCommute = useMemo(
+    () => Math.round(regionData.commutePT * commuteMul),
+    [regionData, commuteMul]
+  );
+  const typicalDriversSum = useMemo(
+    () => (Object.keys(DRIVER_TYPICAL) as DriverKey[]).reduce((s, k) => s + DRIVER_TYPICAL[k], 0),
+    []
+  );
+  const baselineMaintenance = useMemo(
+    () => typicalDriversSum + variableSum + billsUtilities,
+    [typicalDriversSum, variableSum, billsUtilities]
+  );
   const baselineLeftover = useMemo(
-    () => Math.round(netMonthly - housing - baselineCommute - baselineMaintenance - dependentsMonthly - healthcareMonthly - debtMonthly - studentLoan - savingsMonthly),
+    () =>
+      Math.round(
+        netMonthly -
+          housing -
+          baselineCommute -
+          baselineMaintenance -
+          dependentsMonthly -
+          healthcareMonthly -
+          debtMonthly -
+          studentLoan -
+          savingsMonthly
+      ),
     [netMonthly, housing, baselineCommute, baselineMaintenance, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
   const baselineFreedom = useMemo(() => {
@@ -455,7 +927,18 @@ export default function Page() {
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
   const simLeftover = useMemo(
-    () => Math.round(simNet - simHousing - simCommute - maintenanceSum - dependentsMonthly - healthcareMonthly - debtMonthly - studentLoan - savingsMonthly),
+    () =>
+      Math.round(
+        simNet -
+          simHousing -
+          simCommute -
+          maintenanceSum -
+          dependentsMonthly -
+          healthcareMonthly -
+          debtMonthly -
+          studentLoan -
+          savingsMonthly
+      ),
     [simNet, simHousing, simCommute, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
   const simFreedom = useMemo(() => {
@@ -499,7 +982,14 @@ export default function Page() {
       household,
       take_home: netMonthly,
       housing,
-      commute_mode: transportMode === "remote" ? "remote" : transportMode === "pt" ? "pt" : transportMode === "walk" ? "walk" : "drive",
+      commute_mode:
+        transportMode === "remote"
+          ? "remote"
+          : transportMode === "pt"
+          ? "pt"
+          : transportMode === "walk"
+          ? "walk"
+          : "drive",
       commute_monthly: commuteMonthly,
       hours_week: hoursWeek,
       drivers,
@@ -573,7 +1063,9 @@ export default function Page() {
           <div className="h-full bg-zinc-900" style={{ width: `${progressPct}%` }} />
         </div>
 
-        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">The Real Cost of Working</h1>
+        <h1 className="mt-4 text-xl font-semibold bg-gradient-to-r from-zinc-900 to-zinc-600 bg-clip-text text-transparent">
+          The Real Cost of Working
+        </h1>
 
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
 
@@ -605,7 +1097,11 @@ export default function Page() {
             </div>
             <div>
               <label className="text-sm">Country/Region</label>
-              <select value={region} onChange={(e) => setRegion(e.target.value as RegionId)} className="w-full mt-2 rounded-lg border p-2 bg-white">
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value as RegionId)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
                 {regions.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label}
@@ -634,14 +1130,16 @@ export default function Page() {
                     Rural / small town
                   </option>
                 </select>
-                <div className="text-[11px] text-zinc-500 mt-1">
-                  Affects rent and commute estimates — choose where you mainly live.
-                </div>
+                <div className="text-[11px] text-zinc-500 mt-1">Affects rent and commute estimates — choose where you mainly live.</div>
               </div>
             </div>
             <div>
               <label className="text-sm">Commute context</label>
-              <select value={commuteCtx} onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)} className="w-full mt-2 rounded-lg border p-2 bg-white">
+              <select
+                value={commuteCtx}
+                onChange={(e) => setCommuteCtx(e.target.value as CommuteContext)}
+                className="w-full mt-2 rounded-lg border p-2 bg-white"
+              >
                 {Object.entries(COMMUTE_CTX).map(([k, v]) => (
                   <option key={k} value={k}>
                     {v.label}
@@ -653,7 +1151,13 @@ export default function Page() {
           </div>
 
           <div className="flex justify-end pt-2">
-            <button onClick={() => { setStep(1); saveBaseline(); }} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600">
+            <button
+              onClick={() => {
+                setStep(1);
+                saveBaseline();
+              }}
+              className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-rose-600 to-pink-600"
+            >
               Start my month
             </button>
           </div>
@@ -675,8 +1179,22 @@ export default function Page() {
           <div>
             <label className="text-sm">Income per month is</label>
             <div className="flex gap-2 mt-2 text-sm">
-              <button onClick={() => setIsGross(false)} className={`px-3 py-1.5 rounded-full border ${!isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Net (after tax)</button>
-              <button onClick={() => setIsGross(true)} className={`px-3 py-1.5 rounded-full border ${isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Gross (before tax)</button>
+              <button
+                onClick={() => setIsGross(false)}
+                className={`px-3 py-1.5 rounded-full border ${
+                  !isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Net (after tax)
+              </button>
+              <button
+                onClick={() => setIsGross(true)}
+                className={`px-3 py-1.5 rounded-full border ${
+                  isGross ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Gross (before tax)
+              </button>
             </div>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-zinc-500">{currency}</span>
@@ -689,8 +1207,14 @@ export default function Page() {
                 aria-label="Monthly income"
               />
             </div>
-            {takeHomeWeird && <div className="text-[11px] text-amber-600 mt-1">Looks unusually high for monthly. If yearly, divide by 12.</div>}
-            <p className="text-xs text-zinc-500 mt-1">If Gross selected, we estimate Net with a quick regional factor.</p>
+            {takeHomeWeird && (
+              <div className="text-[11px] text-amber-600 mt-1">
+                Looks unusually high for monthly. If yearly, divide by 12.
+              </div>
+            )}
+            <p className="text-xs text-zinc-500 mt-1">
+              If Gross selected, we estimate Net with a quick regional factor.
+            </p>
           </div>
 
           {/* NEW: Other income */}
@@ -720,59 +1244,140 @@ export default function Page() {
                 defaultValue={housingStr}
                 id="housing-input"
                 data-probe="housing"
-                onValue={(t) => { setHousingTouched(true); setHousingStr(t); }}
+                onValue={(t) => {
+                  setHousingTouched(true);
+                  setHousingStr(t);
+                }}
                 className="w-full rounded-lg border p-2 bg-white"
                 aria-label="Monthly housing"
               />
             </div>
             <p className="text-xs text-zinc-500 mt-1">
-              Typical for {regions.find((r) => r.id === region)?.label} × {URBANICITY[urbanicity].label}: {currency}
+              Typical for {regions.find((r) => r.id === region)?.label} × {URBANICITY[urbanicity].label}:{" "}
+              {currency}
               {Math.round(suggestedHousing(region, household) * rentMul).toLocaleString()} ·{" "}
               <button
                 type="button"
                 className="underline"
-                onClick={() => { const v = Math.round(suggestedHousing(region, household) * rentMul); setHousingStr(String(v)); setHousingTouched(true); }}
+                onClick={() => {
+                  const v = Math.round(suggestedHousing(region, household) * rentMul);
+                  setHousingStr(String(v));
+                  setHousingTouched(true);
+                }}
               >
                 Use this
               </button>
             </p>
-            {housingWeird && <div className="text-[11px] text-amber-600 mt-1">That looks unusually low. Continue if intentional.</div>}
+            {housingWeird && (
+              <div className="text-[11px] text-amber-600 mt-1">
+                That looks unusually low. Continue if intentional.
+              </div>
+            )}
             <label className="mt-2 inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={billsIncluded} onChange={(e) => setBillsIncluded(e.target.checked)} /> Bills included?
+              <input
+                type="checkbox"
+                checked={billsIncluded}
+                onChange={(e) => setBillsIncluded(e.target.checked)}
+              />{" "}
+              Bills included?
             </label>
           </div>
 
           <div>
             <label className="text-sm">Hours you work each week, including commute</label>
             <InputRange min={30} max={80} step={1} value={hoursWeek} onValue={setHoursWeek} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">{hoursWeek} hours / week → ~{hoursPerMonth} per month</div>
-            {hoursWeird && <div className="text-[11px] text-amber-600 mt-1">Outside usual range — continue if intentional.</div>}
+            <div className="text-xs text-zinc-500 mt-1">
+              {hoursWeek} hours / week → ~{hoursPerMonth} per month
+            </div>
+            {hoursWeird && (
+              <div className="text-[11px] text-amber-600 mt-1">
+                Outside usual range — continue if intentional.
+              </div>
+            )}
           </div>
 
           <div>
             <label className="text-sm">Getting to work</label>
             <div className="flex gap-2 flex-wrap mt-2">
-              <button onClick={() => setTransportMode("pt")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Public transport</button>
-              <button onClick={() => setTransportMode("drive")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Drive / taxi</button>
-              <button onClick={() => setTransportMode("walk")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Walk / Bike</button>
-              <button onClick={() => setTransportMode("remote")} className={`px-3 py-2 rounded-full border text-sm ${transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>Remote / no commute</button>
+              <button
+                onClick={() => setTransportMode("pt")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "pt" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Public transport
+              </button>
+              <button
+                onClick={() => setTransportMode("drive")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "drive" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Drive / taxi
+              </button>
+              <button
+                onClick={() => setTransportMode("walk")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "walk" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Walk / Bike
+              </button>
+              <button
+                onClick={() => setTransportMode("remote")}
+                className={`px-3 py-2 rounded-full border text-sm ${
+                  transportMode === "remote" ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                }`}
+              >
+                Remote / no commute
+              </button>
             </div>
             {transportMode === "remote" && (
               <div className="mt-2">
                 <label className="text-sm">WFH utilities uplift</label>
-                <InputRange min={0} max={80} step={5} value={wfhUtilities} onValue={setWfhUtilities} className="w-full" />
-                <div className="text-[11px] text-zinc-500">Covers heating/electric/internet share.</div>
+                <InputRange
+                  min={0}
+                  max={80}
+                  step={5}
+                  value={wfhUtilities}
+                  onValue={setWfhUtilities}
+                  className="w-full"
+                />
+                <div className="text-[11px] text-zinc-500">
+                  Covers heating/electric/internet share.
+                </div>
               </div>
             )}
-            <div className="text-xs text-zinc-500 mt-1">Commute est.: <Money value={commuteMonthly} currency={currency} /> / month</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Home & kids</label>
             <div className="flex gap-2 flex-wrap mt-2">
               {(["solo", "partner", "partnerKids", "singleParent", "share", "family"] as Household[]).map((h) => (
-                <button key={h} onClick={() => { setHousehold(h); if (h === "partner" || h === "solo" || h === "share" || h === "family") setChildrenCount(0); }} className={`px-3 py-2 rounded-full border text-sm ${household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                  {h === "solo" ? "Solo" : h === "partner" ? "Partner" : h === "partnerKids" ? "Partner + kids" : h === "singleParent" ? "Single parent" : h === "share" ? "House share" : "Back home"}
+                <button
+                  key={h}
+                  onClick={() => {
+                    setHousehold(h);
+                    if (h === "partner" || h === "solo" || h === "share" || h === "family") setChildrenCount(0);
+                  }}
+                  className={`px-3 py-2 rounded-full border text-sm ${
+                    household === h ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                  }`}
+                >
+                  {h === "solo"
+                    ? "Solo"
+                    : h === "partner"
+                    ? "Partner"
+                    : h === "partnerKids"
+                    ? "Partner + kids"
+                    : h === "singleParent"
+                    ? "Single parent"
+                    : h === "share"
+                    ? "House share"
+                    : "Back home"}
                 </button>
               ))}
             </div>
@@ -782,8 +1387,15 @@ export default function Page() {
                   <label className="text-sm">Children</label>
                   <div className="flex gap-2 mt-2">
                     {[0, 1, 2, 3].map((n) => (
-                      <button key={n} onClick={() => setChildrenCount(n)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
-                        {n}{n === 3 ? "+" : ""}
+                      <button
+                        key={n}
+                        onClick={() => setChildrenCount(n)}
+                        className={`px-3 py-1.5 rounded-full border text-sm ${
+                          childrenCount === n ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                        }`}
+                      >
+                        {n}
+                        {n === 3 ? "+" : ""}
                       </button>
                     ))}
                   </div>
@@ -792,33 +1404,70 @@ export default function Page() {
                   <label className="text-sm">Age band</label>
                   <div className="flex gap-2 mt-2">
                     {(["nursery", "school"] as ChildAge[]).map((a) => (
-                      <button key={a} onClick={() => setChildrenAge(a)} className={`px-3 py-1.5 rounded-full border text-sm ${childrenAge === a ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                      <button
+                        key={a}
+                        onClick={() => setChildrenAge(a)}
+                        className={`px-3 py-1.5 rounded-full border text-sm ${
+                          childrenAge === a ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                        }`}
+                      >
                         {a === "nursery" ? "Nursery/Pre-K" : "School age"}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="text-xs text-zinc-600 col-span-2">Estimated children-related monthly costs: <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} /></div>
+                <div className="text-xs text-zinc-600 col-span-2">
+                  Estimated children-related monthly costs:{" "}
+                  <Money value={childCostPreset(region, childrenCount, childrenAge)} currency={currency} />
+                </div>
               </div>
             )}
           </div>
 
           <div>
             <label className="text-sm">Debt repayments</label>
-            <InputRange min={0} max={2000} step={10} value={debtMonthly} onValue={setDebtMonthly} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1"><Money value={debtMonthly} currency={currency} /> / month</div>
+            <InputRange
+              min={0}
+              max={2000}
+              step={10}
+              value={debtMonthly}
+              onValue={setDebtMonthly}
+              className="w-full mt-3"
+            />
+            <div className="text-xs text-zinc-500 mt-1">
+              <Money value={debtMonthly} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Student loan</label>
-            <InputRange min={0} max={300} step={5} value={studentLoan} onValue={setStudentLoan} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1"><Money value={studentLoan} currency={currency} /> / month</div>
+            <InputRange
+              min={0}
+              max={300}
+              step={5}
+              value={studentLoan}
+              onValue={setStudentLoan}
+              className="w-full mt-3"
+            />
+            <div className="text-xs text-zinc-500 mt-1">
+              <Money value={studentLoan} currency={currency} /> / month
+            </div>
           </div>
 
           <div>
             <label className="text-sm">Savings / pension rate</label>
-            <InputRange min={0} max={20} step={1} value={savingsRate} onValue={setSavingsRate} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">{savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> / month</div>
+            <InputRange
+              min={0}
+              max={20}
+              step={1}
+              value={savingsRate}
+              onValue={setSavingsRate}
+              className="w-full mt-3"
+            />
+            <div className="text-xs text-zinc-500 mt-1">
+              {savingsRate}% → <Money value={computeSavingsFromRate(netMonthly, savingsRate)} currency={currency} /> /
+              month
+            </div>
           </div>
 
           {region === "US" && (
@@ -826,14 +1475,27 @@ export default function Page() {
               <label className="text-sm">Healthcare (US)</label>
               <div className="flex gap-2 flex-wrap mt-2">
                 {(["employer", "market", "none"] as HealthPlanUS[]).map((p) => (
-                  <button key={p} onClick={() => setUsHealthPlan(p)} className={`px-3 py-2 rounded-full border text-sm ${usHealthPlan === p ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"}`}>
+                  <button
+                    key={p}
+                    onClick={() => setUsHealthPlan(p)}
+                    className={`px-3 py-2 rounded-full border text-sm ${
+                      usHealthPlan === p ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-300"
+                    }`}
+                  >
                     {p === "employer" ? "Employer plan" : p === "market" ? "Marketplace" : "Uninsured"}
                   </button>
                 ))}
               </div>
               <div className="mt-2">
                 <label className="text-sm">Override / out-of-pocket</label>
-                <InputRange min={0} max={2000} step={10} value={usHealthcareOverride} onValue={setUsHealthcareOverride} className="w-full" />
+                <InputRange
+                  min={0}
+                  max={2000}
+                  step={10}
+                  value={usHealthcareOverride}
+                  onValue={setUsHealthcareOverride}
+                  className="w-full"
+                />
                 <div className="text-[11px] text-zinc-500">If 0, we use a typical value for your plan.</div>
               </div>
             </div>
@@ -848,13 +1510,25 @@ export default function Page() {
             return (
               <div key={key} className={`border rounded-2xl p-4 shadow-sm ${border} ${bg}`}>
                 <div className={`text-sm font-medium flex items-center gap-2 ${titleClr}`}>
-                  <span className="text-lg" aria-hidden>{meta.emoji}</span>
+                  <span className="text-lg" aria-hidden>
+                    {meta.emoji}
+                  </span>
                   {meta.title}
                 </div>
                 <div className="text-xs text-zinc-600 mb-3">{meta.sub}</div>
-                <InputRange min={lim.min} max={lim.max} step={lim.step} value={drivers[key]} onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))} className="w-full" />
+                <InputRange
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={drivers[key]}
+                  onValue={(n) => setDrivers((d) => ({ ...d, [key]: n }))}
+                  className="w-full"
+                />
                 <div className="text-xs text-zinc-500 mt-1">
-                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}{DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}{lim.min}–{currency}{lim.max}
+                  Now: <Money value={drivers[key]} currency={currency} /> / mo • Typical: {currency}
+                  {DRIVER_TYPICAL[key].toLocaleString()} • Range: {currency}
+                  {lim.min}–{currency}
+                  {lim.max}
                 </div>
               </div>
             );
@@ -865,19 +1539,48 @@ export default function Page() {
             return (
               <div key={k} className="border rounded-2xl p-4">
                 <div className="text-sm font-medium mb-2">{lim.label}</div>
-                <InputRange min={lim.min} max={lim.max} step={lim.step} value={spends[k]} onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))} className="w-full" />
-                <div className="text-xs text-zinc-500 mt-1">Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}{lim.min}–{currency}{lim.max})</div>
-                {k === "pet" && <div className="text-[11px] text-zinc-500">Exclude fashion/grooming; include vet, insurance, daycare/boarding, horses.</div>}
-                {k === "health" && <div className="text-[11px] text-zinc-500">Exclude insurance premiums; include meds, dental, vision, therapy not covered.</div>}
+                <InputRange
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={spends[k]}
+                  onValue={(n) => setSpends((s) => ({ ...s, [k]: n }))}
+                  className="w-full"
+                />
+                <div className="text-xs text-zinc-500 mt-1">
+                  Now: <Money value={spends[k]} currency={currency} /> / month (range {currency}
+                  {lim.min}–{currency}
+                  {lim.max})
+                </div>
+                {k === "pet" && (
+                  <div className="text-[11px] text-zinc-500">
+                    Exclude fashion/grooming; include vet, insurance, daycare/boarding, horses.
+                  </div>
+                )}
+                {k === "health" && (
+                  <div className="text-[11px] text-zinc-500">
+                    Exclude insurance premiums; include meds, dental, vision, therapy not covered.
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
         <div className="flex flex-wrap justify-between items-center gap-2 mt-6">
-          <button onClick={back} className="px-3 py-2 rounded-lg border">Back</button>
+          <button onClick={back} className="px-3 py-2 rounded-lg border">
+            Back
+          </button>
           <div className="flex gap-2">
-            <button onClick={() => { saveBaseline(); next(); }} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600">Continue</button>
+            <button
+              onClick={() => {
+                saveBaseline();
+                next();
+              }}
+              className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-amber-600 to-orange-600"
+            >
+              Continue
+            </button>
           </div>
         </div>
       </CardBody>
@@ -901,7 +1604,9 @@ export default function Page() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-4">
           <div>
             <div className="flex items-center gap-2 text-xs text-zinc-600">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">{badgeLeft}</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">
+                {badgeLeft}
+              </span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 border">
                 {chartUseBaseline ? "Typical local month" : "Your month"}
               </span>
@@ -910,39 +1615,63 @@ export default function Page() {
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <input
-              placeholder={abVariant === "A" ? "you@email.com — get the 1-page plan" : "Email to unblur your fixes"}
+              placeholder={
+                abVariant === "A"
+                  ? "you@email.com — get the 1-page plan"
+                  : "Email to unblur your fixes"
+              }
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-72 px-4 py-2 rounded-lg border bg-white"
             />
             <button
               onClick={saveEmail}
-              className={`px-4 py-2 rounded-lg font-medium transition ${emailSaved ? "border border-emerald-600 text-emerald-600 bg-white" : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"}`}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                emailSaved
+                  ? "border border-emerald-600 text-emerald-600 bg-white"
+                  : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              }`}
             >
-              {emailSaved ? (abVariant === "A" ? "Email saved" : "Saved") : abVariant === "A" ? "Email me the 1-page plan" : "Unlock my plan"}
+              {emailSaved
+                ? abVariant === "A"
+                  ? "Email saved"
+                  : "Saved"
+                : abVariant === "A"
+                ? "Email me the 1-page plan"
+                : "Unlock my plan"}
             </button>
           </div>
         </div>
-        <div className="text-[11px] text-zinc-500 italic mt-1 sm:text-right">Anonymous analytics stored. Email optional and stored separately.</div>
+        <div className="text-[11px] text-zinc-500 italic mt-1 sm:text-right">
+          Anonymous analytics stored. Email optional and stored separately.
+        </div>
 
         <div className="mt-5 grid md:grid-cols-2 gap-6">
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="relative">
-              <div ref={shareRef} /*className={`bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg ${!emailSaved ? "blur-sm select-none pointer-events-none" : ""}`}*/className="bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg"
->
+              <div
+                ref={shareRef}
+                className="bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg"
+              >
                 <div className="text-sm text-zinc-300">Real Cost Simulator</div>
                 <div className="text-3xl font-bold mt-1">
-                  {currency}{Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
+                  {currency}
+                  {Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
                 {/* Plain-English hourly line (respects toggle) */}
                 {headlineFreedom >= 0 ? (
                   <div className="text-lg mt-1">
                     Every hour you spend working (including commuting), you keep about{" "}
-                    <strong>{currency}{headlineFreedom.toFixed(2)}</strong> of disposable money.
+                    <strong>
+                      {currency}
+                      {headlineFreedom.toFixed(2)}
+                    </strong>{" "}
+                    of disposable money.
                   </div>
                 ) : (
                   <div className="text-lg mt-1 text-rose-300">
-                    You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+                    You’re effectively losing money for every hour worked — your costs of working
+                    (housing, transport, dependents, etc.) are higher than your take-home pay.
                   </div>
                 )}
                 <div className="text-[11px] text-zinc-500 mt-1 italic">
@@ -951,7 +1680,10 @@ export default function Page() {
 
                 {netForHeadline > 0 && (
                   <div className="text-3xl font-bold mt-1">
-                    Out of every {currency}1 you earn, {currency}{(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to staying employable and functional.
+                    Out of every {currency}1 you earn,{" "}
+                    {currency}
+                    {(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to staying
+                    employable and functional.
                   </div>
                 )}
 
@@ -961,7 +1693,10 @@ export default function Page() {
                     <input
                       type="checkbox"
                       checked={chartUseBaseline}
-                      onChange={(e) => { setChartUseBaseline(e.target.checked); setChartToggleTouched(true); }}
+                      onChange={(e) => {
+                        setChartUseBaseline(e.target.checked);
+                        setChartToggleTouched(true);
+                      }}
                     />
                     Use typical transit costs in chart (auto unchecked if remote)
                   </label>
@@ -989,28 +1724,37 @@ export default function Page() {
                     savings={savingsForChart}
                   />
                 </div>
-                <div className="mt-4 text-xs text-zinc-400">Estimates • Updated {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
-              </div>
-
-              {/*!emailSaved && (
-                <div className="absolute inset-0 grid place-items-center">
-                  <div className="backdrop-blur-sm bg-zinc-900/70 border border-zinc-700 rounded-xl p-5 text-center max-w-sm mx-4 text-white">
-                    <div className="text-3xl">🔒</div>
-                    <div className="mt-1 font-semibold">Unlock your personalised report</div>
-                    <div className="text-sm text-zinc-300 mt-1">Enter your email to reveal the full breakdown and fixes.</div>
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                      <input placeholder={abVariant === "A" ? "you@email.com" : "Email to unblur"} value={email} onChange={(e) => setEmail(e.target.value)} className="w-72 max-w-full px-3 py-2 rounded-lg border bg-white text-zinc-900" />
-                      <button onClick={saveEmail} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-teal-600">Unlock</button>
-                    </div>
-                    <div className="text-[11px] text-zinc-300 mt-2">One email. No spam — just your PDF and a few tips.</div>
-                  </div>
+                <div className="mt-4 text-xs text-zinc-400">
+                  Estimates • Updated{" "}
+                  {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}
                 </div>
-              )*/}
+              </div>
             </div>
+
+            {/* NEW: City Comparison Card */}
+            <CityComparisonCard
+              currency={currency}
+              netMonthly={netMonthly}
+              leftover={leftover}
+              effectivePerHour={effectivePerHour}
+              housing={housing}
+              dependentsMonthly={dependentsMonthly}
+              commuteMonthly={commuteMonthly}
+              hoursPerMonth={hoursPerMonth}
+              maintenanceSum={maintenanceSum}
+              healthcareMonthly={healthcareMonthly}
+              debtMonthly={debtMonthly}
+              studentLoan={studentLoan}
+              savingsMonthly={savingsMonthly}
+              hasKids={(household === "partnerKids" || household === "singleParent") && childrenCount > 0}
+              transportMode={transportMode}
+            />
 
             {imageUrl && (
               <div className="space-y-2">
-                <div className="text-sm text-zinc-600">Share image ready — right click to save, or long-press on mobile.</div>
+                <div className="text-sm text-zinc-600">
+                  Share image ready — right click to save, or long-press on mobile.
+                </div>
                 <img src={imageUrl} alt="share" className="w-full rounded-lg border" />
               </div>
             )}
@@ -1024,9 +1768,14 @@ export default function Page() {
                   <div className="text-3xl font-semibold">{efficiencyScore}/100</div>
                 </div>
                 <div className="mt-2 h-2 w-full rounded bg-zinc-200 overflow-hidden">
-                  <div className="h-2 bg-emerald-500" style={{ width: `${efficiencyScore}%` }} />
+                  <div
+                    className="h-2 bg-emerald-500"
+                    style={{ width: `${efficiencyScore}%` }}
+                  />
                 </div>
-                <div className="text-[11px] text-zinc-500 mt-2">Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.</div>
+                <div className="text-[11px] text-zinc-500 mt-2">
+                  Based on your hour-of-freedom, leftover ratio, maintenance %, and hours worked.
+                </div>
               </CardBody>
             </Card>
 
@@ -1064,7 +1813,10 @@ export default function Page() {
                   <div>
                     <div className="flex justify-between text-zinc-700 font-medium">
                       <span>Rent change (monthly)</span>
-                      <span>{currency}{simRentDelta}</span>
+                      <span>
+                        {currency}
+                        {simRentDelta}
+                      </span>
                     </div>
                     <InputRange
                       min={-600}
@@ -1079,7 +1831,10 @@ export default function Page() {
                   <div>
                     <div className="flex justify-between text-zinc-700 font-medium">
                       <span>Income change (monthly)</span>
-                      <span>{currency}{simIncomeDelta}</span>
+                      <span>
+                        {currency}
+                        {simIncomeDelta}
+                      </span>
                     </div>
                     <InputRange
                       min={-500}
@@ -1097,13 +1852,17 @@ export default function Page() {
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-600 font-medium">Before (baseline)</span>
                     <span className="font-medium text-zinc-800">
-                      {currency}{Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}{baselineFreedom.toFixed(2)}/hr
+                      {currency}
+                      {Math.max(0, baselineLeftover).toLocaleString()} / mo · {currency}
+                      {baselineFreedom.toFixed(2)}/hr
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-600 font-medium">After (with changes)</span>
                     <span className="font-semibold text-amber-800">
-                      {currency}{Math.max(0, simLeftover).toLocaleString()} / mo · {currency}{simFreedom.toFixed(2)}/hr
+                      {currency}
+                      {Math.max(0, simLeftover).toLocaleString()} / mo · {currency}
+                      {simFreedom.toFixed(2)}/hr
                     </span>
                   </div>
 
@@ -1115,9 +1874,10 @@ export default function Page() {
                     <span className="font-medium">Difference</span>
                     <span className="font-semibold">
                       {simDelta >= 0 ? "+" : ""}
-                      {currency}{simDelta.toLocaleString()} / mo ·{" "}
-                      {simDeltaPerHour >= 0 ? "+" : ""}
-                      {currency}{simDeltaPerHour.toFixed(2)}/hr
+                      {currency}
+                      {simDelta.toLocaleString()} / mo · {simDeltaPerHour >= 0 ? "+" : ""}
+                      {currency}
+                      {simDeltaPerHour.toFixed(2)}/hr
                     </span>
                   </div>
 
@@ -1147,18 +1907,31 @@ export default function Page() {
                   {effectivePerHour >= 0 ? (
                     <>
                       After every hour you spend working (including commuting), you truly keep about{" "}
-                      <strong>{currency}{effectivePerHour.toFixed(2)}</strong> of disposable money.
+                      <strong>
+                        {currency}
+                        {effectivePerHour.toFixed(2)}
+                      </strong>{" "}
+                      of disposable money.
                     </>
                   ) : (
                     <span className="text-rose-700">
-                      You’re effectively losing money for every hour worked — your costs of working (housing, transport, dependents, etc.) are higher than your take-home pay.
+                      You’re effectively losing money for every hour worked — your costs of working
+                      (housing, transport, dependents, etc.) are higher than your take-home pay.
                     </span>
                   )}
                 </div>
 
                 <div className="text-xs text-zinc-500 mt-2">
-                  Commute: {transportMode === "remote" ? "remote" : transportMode === "pt" ? "public transport" : transportMode === "walk" ? "walk/bike" : "driving/taxis"} • Maintenance: {maintenancePct}% •
-                  Kids: <Money value={dependentsMonthly} currency={currency} />
+                  Commute:{" "}
+                  {transportMode === "remote"
+                    ? "remote"
+                    : transportMode === "pt"
+                    ? "public transport"
+                    : transportMode === "walk"
+                    ? "walk/bike"
+                    : "driving/taxis"}{" "}
+                  • Maintenance: {maintenancePct}% • Kids:{" "}
+                  <Money value={dependentsMonthly} currency={currency} />
                 </div>
               </CardBody>
             </Card>
@@ -1166,15 +1939,23 @@ export default function Page() {
             <Card>
               <CardBody>
                 <div className="text-sm">Commute estimate</div>
-                <div className="text-2xl font-semibold mt-1"><Money value={commuteMonthly} currency={currency} /> / month</div>
-                <div className="text-xs text-zinc-500 mt-2">Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.</div>
+                <div className="text-2xl font-semibold mt-1">
+                  <Money value={commuteMonthly} currency={currency} /> / month
+                </div>
+                <div className="text-xs text-zinc-500 mt-2">
+                  Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.
+                </div>
               </CardBody>
             </Card>
 
             <Card>
               <CardBody>
                 <div className="text-sm">Maintenance totals</div>
-                <div className="text-xs text-zinc-500 mt-1">Drivers: <Money value={driversSum} currency={currency} /> • Variable spends: <Money value={variableSum} currency={currency} /> • Bills/utilities: <Money value={billsUtilities} currency={currency} /></div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  Drivers: <Money value={driversSum} currency={currency} /> • Variable spends:{" "}
+                  <Money value={variableSum} currency={currency} /> • Bills/utilities:{" "}
+                  <Money value={billsUtilities} currency={currency} />
+                </div>
               </CardBody>
             </Card>
 
@@ -1182,7 +1963,9 @@ export default function Page() {
               <Card>
                 <CardBody>
                   <div className="text-sm">Healthcare gap</div>
-                  <div className="text-2xl font-semibold mt-1"><Money value={healthcareMonthly} currency={currency} /> / month</div>
+                  <div className="text-2xl font-semibold mt-1">
+                    <Money value={healthcareMonthly} currency={currency} /> / month
+                  </div>
                 </CardBody>
               </Card>
             )}
@@ -1191,13 +1974,20 @@ export default function Page() {
               <Card>
                 <CardBody>
                   <div className="text-sm">Savings / pension</div>
-                  <div className="text-2xl font-semibold mt-1"><Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)</div>
+                  <div className="text-2xl font-semibold mt-1">
+                    <Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)
+                  </div>
                 </CardBody>
               </Card>
             )}
 
             <div className="flex gap-2">
-              <button onClick={makeShareCard} className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600">Create share image</button>
+              <button
+                onClick={makeShareCard}
+                className="px-3 py-2 rounded-lg text-white bg-gradient-to-r from-indigo-600 to-violet-600"
+              >
+                Create share image
+              </button>
             </div>
           </div>
         </div>
@@ -1236,26 +2026,35 @@ function getCookie(name: string) {
 function setCookie(name: string, value: string, days = 365) {
   if (typeof document === "undefined") return;
   const maxAge = days * 24 * 60 * 60;
-  document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=" + String(maxAge);
+  document.cookie =
+    name + "=" + encodeURIComponent(value) + "; path=/; max-age=" + String(maxAge);
 }
 function getOrCreateSessionId(): string {
   try {
     const fromCookie = getCookie("rcs_sid");
-    const fromLS = typeof window !== "undefined" ? window.localStorage.getItem("rcs_session_id") : null;
+    const fromLS =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("rcs_session_id")
+        : null;
     const existing = fromCookie || fromLS;
     if (existing) {
       if (!fromCookie) setCookie("rcs_sid", existing);
-      if (!fromLS && typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", existing);
+      if (!fromLS && typeof window !== "undefined")
+        window.localStorage.setItem("rcs_session_id", existing);
       return existing;
     }
     const id = simpleId();
     setCookie("rcs_sid", id);
-    if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id);
+    if (typeof window !== "undefined")
+      window.localStorage.setItem("rcs_session_id", id);
     return id;
   } catch {
     const id = "sid_" + Math.random().toString(36).slice(2);
     setCookie("rcs_sid", id);
-    try { if (typeof window !== "undefined") window.localStorage.setItem("rcs_session_id", id); } catch {}
+    try {
+      if (typeof window !== "undefined")
+        window.localStorage.setItem("rcs_session_id", id);
+    } catch {}
     return id;
   }
 }
@@ -1336,7 +2135,9 @@ function StickyNumericInput(props: {
         const norm = normalize(el.value);
         el.value = norm;
         onValue(norm);
-        try { el.setSelectionRange(pos, pos); } catch {}
+        try {
+          el.setSelectionRange(pos, pos);
+        } catch {}
       }}
       {...rest}
     />
