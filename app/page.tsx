@@ -1332,22 +1332,7 @@ export default function Page() {
                 Remote / no commute
               </button>
             </div>
-            {transportMode === "remote" && (
-              <div className="mt-2">
-                <label className="text-sm">WFH utilities uplift</label>
-                <InputRange
-                  min={0}
-                  max={80}
-                  step={5}
-                  value={wfhUtilities}
-                  onValue={setWfhUtilities}
-                  className="w-full"
-                />
-                <div className="text-[11px] text-zinc-500">
-                  Covers heating/electric/internet share.
-                </div>
-              </div>
-            )}
+            WFH utilities uplift
             <div className="text-xs text-zinc-500 mt-1">
               Commute est.: <Money value={commuteMonthly} currency={currency} /> / month
             </div>
@@ -1949,15 +1934,22 @@ export default function Page() {
             </Card>
 
             <Card>
-              <CardBody>
-                <div className="text-sm">Maintenance totals</div>
-                <div className="text-xs text-zinc-500 mt-1">
-                  Drivers: <Money value={driversSum} currency={currency} /> • Variable spends:{" "}
-                  <Money value={variableSum} currency={currency} /> • Bills/utilities:{" "}
-                  <Money value={billsUtilities} currency={currency} />
-                </div>
-              </CardBody>
-            </Card>
+  <CardBody>
+    <div className="text-sm">Maintenance totals</div>
+    <div className="text-xs text-zinc-500 mt-1">
+      Drivers: <Money value={driversSum} currency={currency} /> •
+      Variable spends: <Money value={variableSum} currency={currency} /> •
+      Bills/utilities: <Money value={billsUtilities} currency={currency} />
+      {transportMode === "remote" && (
+        <>
+          {" "}
+          • WFH utilities uplift: <Money value={wfhUtilities} currency={currency} />
+        </>
+      )}
+    </div>
+  </CardBody>
+</Card>
+
 
             {healthcareMonthly > 0 && (
               <Card>
