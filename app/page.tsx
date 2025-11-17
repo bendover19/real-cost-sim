@@ -44,20 +44,22 @@ export default function LandingPage() {
 
             {/* CTA */}
             <div className="pt-4 space-y-2">
-              <Link
-                href="/sim"
-                className="inline-flex w-full items-center justify-center rounded-full
-                           bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-lg font-semibold
-                           text-white shadow-lg hover:shadow-xl transition-transform hover:scale-[1.02]
-                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
-                           focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              >
-                Start my month →
-              </Link>
-              <p className="text-[11px] text-zinc-500">
-                Under 1 minute. No login.
-              </p>
-            </div>
+  <Link
+    href="/sim"
+    style={{ color: "#ffffff", textDecoration: "none" }}
+    className="inline-flex w-full items-center justify-center rounded-full
+               bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-lg font-semibold
+               text-white shadow-lg hover:shadow-xl transition-transform hover:scale-[1.02]
+               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+               focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+  >
+    Start my month →
+  </Link>
+  <p className="text-[11px] text-zinc-500">
+    Under 1 minute. No login. Numbers stay on your device unless you choose to share them.
+  </p>
+</div>
+
           </div>
         </div>
       </section>
