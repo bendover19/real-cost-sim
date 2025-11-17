@@ -20,7 +20,7 @@ export default function LandingPage() {
               Your payslip doesn&apos;t show the true cost of staying employable. The{" "}
               <span className="font-semibold">Real Cost Simulator</span> reveals what you
               actually keep each month and your real hourly rate once your time and
-              work-related costs are included.
+              work-related costs are included & then most importantly, <span className="font-semibold">how to fix it</span>.
             </p>
 
             {/* CTA */}
