@@ -1028,7 +1028,7 @@ export default function Page() {
 
   try {
     // dynamic import so it only runs in the browser
-    const html2canvasModule = await import("html2canvas");
+    const html2canvasModule = await import("html2canvas-pro");
     const html2canvas = html2canvasModule.default;
 
     const canvas = await html2canvas(shareRef.current, {
