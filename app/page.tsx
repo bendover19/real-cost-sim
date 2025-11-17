@@ -56,7 +56,7 @@ export default function LandingPage() {
     Start my month →
   </Link>
   <p className="text-[11px] text-zinc-500">
-    Under 1 minute. No login. Numbers stay on your device unless you choose to share them.
+    Under 1 minute. No login.
   </p>
 </div>
 
