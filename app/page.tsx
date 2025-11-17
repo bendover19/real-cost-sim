@@ -67,9 +67,11 @@ export default function LandingPage() {
         </section>
 
         {/* Placeholder for future ads (AFTER approval) */}
-        <section className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-xs text-zinc-500">
-          Placeholder for future on-page ad position (after AdSense approval).
-        </section>
+        {/*
+<section className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-xs text-zinc-500">
+  Placeholder for future on-page ad position (after AdSense approval).
+</section>
+*/}
 
         <footer className="text-xs text-zinc-500 pt-4">
           Estimates only. Not financial advice.
