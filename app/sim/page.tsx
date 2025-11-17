@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import html2canvas from "html2canvas";
+/*import html2canvas from "html2canvas";*/
 
 /* ============================================================
    Real Cost Simulator — page.tsx
@@ -1024,10 +1024,25 @@ export default function Page() {
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   const makeShareCard = useCallback(async () => {
-    if (!shareRef.current) return;
-    const canvas = await html2canvas(shareRef.current, { backgroundColor: "#0a0a0a", scale: 2 });
+  if (!shareRef.current) return;
+
+  try {
+    // dynamic import so it only runs in the browser
+    const html2canvasModule = await import("html2canvas");
+    const html2canvas = html2canvasModule.default;
+
+    const canvas = await html2canvas(shareRef.current, {
+      backgroundColor: "#0a0a0a",
+      scale: window.devicePixelRatio || 2,
+      useCORS: true,
+    });
+
     setImageUrl(canvas.toDataURL("image/png"));
-  }, []);
+  } catch (err) {
+    console.error("Failed to create share image", err);
+  }
+}, []);
+
 
   // --------- Submit logic ----------
   function buildPayload() {
