@@ -1128,10 +1128,7 @@ export default function Page() {
         <div className="mt-3 h-1 w-full rounded bg-gradient-to-r from-zinc-900 to-zinc-600" />
 
         <div className="mt-6 text-zinc-700 space-y-3 leading-relaxed">
-          <p>Most people never see how much of their paycheck quietly disappears into rent, transport, debt, and time spent commuting. Your payslip ≠ your pay.</p>
-          <p>
-            The <strong>Real Cost Simulator</strong> helps you uncover your true “hour of freedom” — the amount of income you actually keep after all the hidden costs of working life.
-          </p>
+          
           <p>In under a minute, you’ll see how small changes in housing, commute, or hours worked can translate into more free time and financial breathing room.</p>
         </div>
 
