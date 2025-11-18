@@ -1773,74 +1773,46 @@ export default function Page() {
           Anonymous analytics stored. Email optional and stored separately.
         </div>
 
-        <div className="mt-5 grid md:grid-cols-2 gap-6">
+                <div className="mt-5 grid md:grid-cols-2 gap-6">
           <div className="space-y-5">
             <div className="relative">
-  <div
-    ref={shareRef}
-    style={{
-      backgroundColor: "#020617",
-      color: "#f9fafb",
-      borderRadius: "16px",
-      padding: "20px",
-      boxShadow: "0 24px 60px rgba(15,23,42,0.9)",
-      border: "1px solid rgba(251,113,133,0.55)",
-      fontFamily:
-        "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif",
-      maxWidth: "640px",
-    }}
-  >
-    <div style={{ fontSize: "13px", color: "#9ca3af" }}>Real Cost Simulator</div>
+              <div
+                ref={shareRef}
+                className="bg-zinc-900 text-white rounded-2xl p-5 ring-1 ring-rose-300/30 shadow-lg"
+              >
+                <div className="text-sm text-zinc-300">Real Cost Simulator</div>
+                <div className="text-3xl font-bold mt-1">
+                  {currency}
+                  {Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
+                </div>
+                {/* Plain-English hourly line (respects toggle) */}
+                {headlineFreedom >= 0 ? (
+                  <div className="text-lg mt-1">
+                    Every hour you spend working (including commuting), you keep about{" "}
+                    <strong>
+                      {currency}
+                      {headlineFreedom.toFixed(2)}
+                    </strong>{" "}
+                    of disposable money.
+                  </div>
+                ) : (
+                  <div className="text-lg mt-1 text-rose-300">
+                    You’re effectively losing money for every hour worked — your costs of working
+                    (housing, transport, dependents, etc.) are higher than your take-home pay.
+                  </div>
+                )}
+                <div className="text-[11px] text-zinc-500 mt-1 italic">
+                  Calculated from your net discretionary pay ÷ actual hours (incl. commute).
+                </div>
 
-    <div style={{ fontSize: "28px", fontWeight: 700, marginTop: "4px" }}>
-      {currency}
-      {Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
-    </div>
-
-    {headlineFreedom >= 0 ? (
-      <div style={{ fontSize: "16px", marginTop: "6px", color: "#e5e7eb" }}>
-        Every hour you spend working (including commuting), you keep about{" "}
-        <strong>
-          {currency}
-          {headlineFreedom.toFixed(2)}
-        </strong>{" "}
-        of disposable money.
-      </div>
-    ) : (
-      <div style={{ fontSize: "16px", marginTop: "6px", color: "#fecaca" }}>
-        You’re effectively losing money for every hour worked — your costs of working
-        (housing, transport, dependents, etc.) are higher than your take-home pay.
-      </div>
-    )}
-
-    <div
-      style={{
-        fontSize: "11px",
-        marginTop: "6px",
-        color: "#6b7280",
-        fontStyle: "italic",
-      }}
-    >
-      Calculated from your net discretionary pay ÷ actual hours (incl. commute).
-    </div>
-
-    {netForHeadline > 0 && (
-      <div
-        style={{
-          fontSize: "20px",
-          fontWeight: 600,
-          marginTop: "10px",
-          color: "#fb7185",
-        }}
-      >
-        Out of every {currency}1 you earn,{" "}
-        {currency}
-        {(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to
-        staying employable and functional.
-      </div>
-    )}
-  </div>
-</div>
+                {netForHeadline > 0 && (
+                  <div className="text-3xl font-bold mt-1">
+                    Out of every {currency}1 you earn,{" "}
+                    {currency}
+                    {(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to staying
+                    employable and functional.
+                  </div>
+                )}
 
                 {/* Chart toggles */}
                 <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-zinc-300">
@@ -1915,6 +1887,7 @@ export default function Page() {
               </div>
             )}
           </div>
+
 
           <div className="space-y-5">
             <Card>
