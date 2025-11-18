@@ -1429,31 +1429,41 @@ useEffect(() => {
             </div>
 
             {transportMode !== "remote" && (
-              <div className="mt-3">
-                <label className="text-sm flex justify-between items-baseline">
-                  <span>Time spent commuting on a working day (there & back)</span>
-                  <span className="text-xs text-zinc-600">
-                    ~{commuteMinsPerDay} min/day ≈ {commuteHoursPerWeek.toFixed(1)} h/week
-                  </span>
-                </label>
-                <InputRange
-                  min={0}
-                  max={180}
-                  step={5}
-                  value={commuteMinsPerDay}
-                  onValue={setCommuteMinsPerDay}
-                  className="w-full mt-2"
-                />
-                <div className="text-[11px] text-zinc-500 mt-1">
-                  Used to calculate how much of your time and money goes into the commute.
-                </div>
-                {hoursSplitWeird && (
-                  <div className="text-[11px] text-amber-600 mt-1">
-                    Your commute time is higher than your total work+commute hours. One of these might be off.
-                  </div>
-                )}
-              </div>
-            )}
+  <div className="mt-3">
+    {/* Title + big live minute value */}
+    <div className="flex justify-between items-baseline text-sm">
+      <span>Time spent commuting on a working day (there & back)</span>
+      <span className="font-medium text-zinc-800">
+        {commuteMinsPerDay} min
+      </span>
+    </div>
+
+    {/* Live weekly hours */}
+    <div className="text-xs text-zinc-600 mt-0.5">
+      ≈ {commuteHoursPerWeek.toFixed(1)} h/week
+    </div>
+
+    <InputRange
+      min={0}
+      max={180}
+      step={5}
+      value={commuteMinsPerDay}
+      onValue={setCommuteMinsPerDay}
+      className="w-full mt-2"
+    />
+
+    <div className="text-[11px] text-zinc-500 mt-1">
+      Used to calculate how much of your time and money goes into the commute.
+    </div>
+
+    {hoursSplitWeird && (
+      <div className="text-[11px] text-amber-600 mt-1">
+        Your commute time is higher than your total work+commute hours. One of these might be off.
+      </div>
+    )}
+  </div>
+)}
+
 
             {transportMode === "remote" && (
               <div className="mt-2">
