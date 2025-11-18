@@ -51,6 +51,12 @@ const InputRange: React.FC<
     if (!live) commit(inner);
   };
 
+   export const metadata: Metadata = {
+  title: "Real Cost Simulator – Interactive Calculator",
+  description:
+    "Adjust income, hours, commute time and lifestyle costs to see how much money and time you actually keep each month.",
+};
+
   return (
     <input
       type="range"
