@@ -1735,7 +1735,7 @@ export default function Page() {
   const headlineFreedom = chartUseBaseline ? baselineFreedom : effectivePerHour;
   const netForHeadline = netForChart;
 
-  const RevealSection = (
+    const RevealSection = (
     <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -1787,119 +1787,121 @@ export default function Page() {
         </div>
 
         <div className="mt-5 grid md:grid-cols-2 gap-6">
+          {/* LEFT COLUMN: share card, toggles, chart, city compare, image */}
           <div className="space-y-5">
+            {/* SHARE CARD (what gets rendered to image) */}
             <div className="relative">
-  <div
-    ref={shareRef}
-    style={{
-      backgroundColor: "#020617",
-      color: "#f9fafb",
-      borderRadius: "16px",
-      padding: "20px",
-      boxShadow: "0 24px 60px rgba(15,23,42,0.9)",
-      border: "1px solid rgba(251,113,133,0.55)",
-      fontFamily:
-        "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif",
-      maxWidth: "640px",
-    }}
-  >
-    <div style={{ fontSize: "13px", color: "#9ca3af" }}>Real Cost Simulator</div>
+              <div
+                ref={shareRef}
+                style={{
+                  backgroundColor: "#020617",
+                  color: "#f9fafb",
+                  borderRadius: "16px",
+                  padding: "20px",
+                  boxShadow: "0 24px 60px rgba(15,23,42,0.9)",
+                  border: "1px solid rgba(251,113,133,0.55)",
+                  fontFamily:
+                    "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif",
+                  maxWidth: "640px",
+                }}
+              >
+                <div style={{ fontSize: "13px", color: "#9ca3af" }}>Real Cost Simulator</div>
 
-    <div style={{ fontSize: "28px", fontWeight: 700, marginTop: "4px" }}>
-      {currency}
-      {Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
-    </div>
-
-    {headlineFreedom >= 0 ? (
-      <div style={{ fontSize: "16px", marginTop: "6px", color: "#e5e7eb" }}>
-        Every hour you spend working (including commuting), you keep about{" "}
-        <strong>
-          {currency}
-          {headlineFreedom.toFixed(2)}
-        </strong>{" "}
-        of disposable money.
-      </div>
-    ) : (
-      <div style={{ fontSize: "16px", marginTop: "6px", color: "#fecaca" }}>
-        You’re effectively losing money for every hour worked — your costs of working
-        (housing, transport, dependents, etc.) are higher than your take-home pay.
-      </div>
-    )}
-
-    <div
-      style={{
-        fontSize: "11px",
-        marginTop: "6px",
-        color: "#6b7280",
-        fontStyle: "italic",
-      }}
-    >
-      Calculated from your net discretionary pay ÷ actual hours (incl. commute).
-    </div>
-
-    {netForHeadline > 0 && (
-      <div
-        style={{
-          fontSize: "20px",
-          fontWeight: 600,
-          marginTop: "10px",
-          color: "#fb7185",
-        }}
-      >
-        Out of every {currency}1 you earn,{" "}
-        {currency}
-        {(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to
-        staying employable and functional.
-      </div>
-    )}
-  </div>
-</div>
-
-                {/* Chart toggles */}
-                <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-zinc-300">
-                  <label className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={chartUseBaseline}
-                      onChange={(e) => {
-                        setChartUseBaseline(e.target.checked);
-                        setChartToggleTouched(true);
-                      }}
-                    />
-                    Use typical transit costs in chart (auto unchecked if remote)
-                  </label>
-                  <label className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={includeOtherInChart}
-                      onChange={(e) => setIncludeOtherInChart(e.target.checked)}
-                    />
-                    Include “Other income” in chart totals
-                  </label>
+                <div style={{ fontSize: "28px", fontWeight: 700, marginTop: "4px" }}>
+                  {currency}
+                  {Math.max(0, headlineLeftover).toLocaleString()} kept over {hoursPerMonth}h
                 </div>
 
-                <div className="mt-3">
-                  <div className="text-xs text-zinc-400 mb-2">If you do nothing, here’s where it goes</div>
-                  <BarChart
-                    currency={currency}
-                    net={netForChart}
-                    housing={housing}
-                    commute={chartCommute}
-                    maintenance={chartMaintenance}
-                    dependents={dependentsMonthly}
-                    healthcare={healthcareMonthly}
-                    debt={debtMonthly + studentLoan}
-                    savings={savingsForChart}
-                  />
+                {headlineFreedom >= 0 ? (
+                  <div style={{ fontSize: "16px", marginTop: "6px", color: "#e5e7eb" }}>
+                    Every hour you spend working (including commuting), you keep about{" "}
+                    <strong>
+                      {currency}
+                      {headlineFreedom.toFixed(2)}
+                    </strong>{" "}
+                    of disposable money.
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "16px", marginTop: "6px", color: "#fecaca" }}>
+                    You’re effectively losing money for every hour worked — your costs of working
+                    (housing, transport, dependents, etc.) are higher than your take-home pay.
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    fontSize: "11px",
+                    marginTop: "6px",
+                    color: "#6b7280",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Calculated from your net discretionary pay ÷ actual hours (incl. commute).
                 </div>
-                <div className="mt-4 text-xs text-zinc-400">
-                  Estimates • Updated{" "}
-                  {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}
-                </div>
+
+                {netForHeadline > 0 && (
+                  <div
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: 600,
+                      marginTop: "10px",
+                      color: "#fb7185",
+                    }}
+                  >
+                    Out of every {currency}1 you earn,{" "}
+                    {currency}
+                    {(1 - Math.max(0, headlineLeftover) / netForHeadline).toFixed(2)} goes to
+                    staying employable and functional.
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* NEW: City Comparison Card */}
+            {/* Toggles & chart (NOT part of screenshot) */}
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-zinc-300">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={chartUseBaseline}
+                  onChange={(e) => {
+                    setChartUseBaseline(e.target.checked);
+                    setChartToggleTouched(true);
+                  }}
+                />
+                Use typical transit costs in chart (auto unchecked if remote)
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeOtherInChart}
+                  onChange={(e) => setIncludeOtherInChart(e.target.checked)}
+                />
+                Include “Other income” in chart totals
+              </label>
+            </div>
+
+            <div className="mt-3">
+              <div className="text-xs text-zinc-400 mb-2">
+                If you do nothing, here’s where it goes
+              </div>
+              <BarChart
+                currency={currency}
+                net={netForChart}
+                housing={housing}
+                commute={chartCommute}
+                maintenance={chartMaintenance}
+                dependents={dependentsMonthly}
+                healthcare={healthcareMonthly}
+                debt={debtMonthly + studentLoan}
+                savings={savingsForChart}
+              />
+            </div>
+            <div className="mt-4 text-xs text-zinc-400">
+              Estimates • Updated{" "}
+              {new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}
+            </div>
+
+            {/* City comparison */}
             <CityComparisonCard
               currency={currency}
               netMonthly={netMonthly}
@@ -1919,6 +1921,7 @@ export default function Page() {
               commuteMinsPerDay={commuteMinsPerDay}
             />
 
+            {/* Resulting image preview */}
             {imageUrl && (
               <div className="space-y-2">
                 <div className="text-sm text-zinc-600">
@@ -1929,6 +1932,7 @@ export default function Page() {
             )}
           </div>
 
+          {/* RIGHT COLUMN: all the existing cards */}
           <div className="space-y-5">
             <Card>
               <CardBody>
@@ -1950,13 +1954,11 @@ export default function Page() {
 
             <Card className="bg-gradient-to-br from-amber-50 via-orange-100 to-rose-50 border-amber-200 shadow-md hover:shadow-lg transition-shadow">
               <CardBody>
-                {/* Title */}
                 <div className="text-lg font-bold text-amber-800 tracking-tight mb-2 flex items-center gap-2">
                   <span className="text-2xl">🎯</span>
                   <span className="drop-shadow-sm">Try quick changes</span>
                 </div>
 
-                {/* Sliders */}
                 <div className="mt-2 space-y-4 text-sm">
                   <div>
                     <div className="flex justify-between text-zinc-700 font-medium">
@@ -2016,7 +2018,6 @@ export default function Page() {
                   </div>
                 </div>
 
-                {/* Results box */}
                 <div className="mt-5 rounded-xl border border-amber-300 bg-white/70 backdrop-blur p-3 text-sm space-y-2 shadow-inner">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-600 font-medium">Before (baseline)</span>
