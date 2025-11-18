@@ -819,19 +819,28 @@ const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
   const officeDaysPerWeek = 5;
 
   const commuteHoursPerWeek = useMemo(
-    () =>
-      transportMode === "remote" || transportMode === "walk"
-        ? 0
-        : (commuteMinsPerDay * officeDaysPerWeek) / 60,
-    [transportMode, commuteMinsPerDay, officeDaysPerWeek]
-  );
+  () =>
+    transportMode === "remote" || transportMode === "walk"
+      ? 0
+      : (commuteMinsPerDay * officeDaysPerWeek) / 60,
+  [transportMode, commuteMinsPerDay, officeDaysPerWeek]
+);
 
-  const workHoursPerWeek = useMemo(
-    () => Math.max(0, hoursWeek - commuteHoursPerWeek),
-    [hoursWeek, commuteHoursPerWeek]
-  );
+// hoursWeek is now *work only*
+const workHoursPerWeek = useMemo(() => hoursWeek, [hoursWeek]);
 
-  const hoursPerMonth = useMemo(() => Math.round(hoursWeek * 4.3), [hoursWeek]);
+// total job time = work + commute
+const totalJobHoursPerWeek = useMemo(
+  () => workHoursPerWeek + commuteHoursPerWeek,
+  [workHoursPerWeek, commuteHoursPerWeek]
+);
+
+// this drives your "hour of freedom" denominator
+const hoursPerMonth = useMemo(
+  () => Math.round(totalJobHoursPerWeek * 4.3),
+  [totalJobHoursPerWeek]
+);
+
 
   const baseNetFromPrimary = useMemo(
     () => (isGross ? approximateFromGross(region, takeHome) : takeHome),
@@ -1379,11 +1388,12 @@ useEffect(() => {
           </div>
 
           <div>
-            <label className="text-sm">Hours you work each week, including commute</label>
-            <InputRange min={30} max={80} step={1} value={hoursWeek} onValue={setHoursWeek} className="w-full mt-3" />
-            <div className="text-xs text-zinc-500 mt-1">
-              {hoursWeek} hours / week → ~{hoursPerMonth} per month
-            </div>
+            <label className="text-sm">Hours you actually work each week (not counting commute)</label>
+<InputRange ... value={hoursWeek} ... />
+<div className="text-xs text-zinc-500 mt-1">
+  {hoursWeek} hours / week at work
+</div>
+
             {hoursWeird && (
               <div className="text-[11px] text-amber-600 mt-1">
                 Outside usual range — continue if intentional.
@@ -1442,6 +1452,10 @@ useEffect(() => {
     <div className="text-xs text-zinc-600 mt-0.5">
       ≈ {commuteHoursPerWeek.toFixed(1)} h/week
     </div>
+     <div className="text-[11px] text-zinc-500">
+  This job takes about {totalJobHoursPerWeek.toFixed(1)} h/week in total,
+  combining work and commute.
+</div>
 
     <InputRange
       min={0}
