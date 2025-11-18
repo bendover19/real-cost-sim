@@ -1800,33 +1800,34 @@ useEffect(() => {
             <h2 className="text-xl font-semibold mt-2">Your month, in plain numbers</h2>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <input
-              placeholder={
-                abVariant === "A"
-                  ? "you@email.com — get the 1-page plan"
-                  : "Email to unblur your fixes"
-              }
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-72 px-4 py-2 rounded-lg border bg-white"
-            />
-            <button
-              onClick={saveEmail}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                emailSaved
-                  ? "border border-emerald-600 text-emerald-600 bg-white"
-                  : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-              }`}
-            >
-              {emailSaved
-                ? abVariant === "A"
-                  ? "Email saved"
-                  : "Saved"
-                : abVariant === "A"
-                ? "Email me the 1-page plan"
-                : "Unlock my plan"}
-            </button>
-          </div>
+  <input
+    placeholder={
+      abVariant === "A"
+        ? "you@email.com — send me my saved plan"
+        : "Email to save & send this plan"
+    }
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="w-72 px-4 py-2 rounded-lg border bg-white"
+  />
+  <button
+    onClick={saveEmail}
+    className={`px-4 py-2 rounded-lg font-medium transition ${
+      emailSaved
+        ? "border border-emerald-600 text-emerald-600 bg-white"
+        : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+    }`}
+  >
+    {emailSaved
+      ? abVariant === "A"
+        ? "Plan saved & emailed"
+        : "Sent"
+      : abVariant === "A"
+      ? "Save & email my plan"
+      : "Email this plan to me"}
+  </button>
+</div>
+
         </div>
         <div className="text-[11px] text-zinc-500 italic mt-1 sm:text-right">
           Anonymous analytics stored. Email optional and stored separately.
