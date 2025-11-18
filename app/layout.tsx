@@ -19,14 +19,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 (function(){
   // Helpers
   const isBadIframe = (el) => {
-    try {
-      if (!el) return false;
-      const n = (el.getAttribute('name')||'').toLowerCase();
-      const s = (el.getAttribute('src')||'').toLowerCase();
-      // Tweak list if you add more vendors
-      return n==='googlefcpresent' || s.includes('fundingchoices') || s.includes('googlesyndication') || s.includes('google.com');
-    } catch { return false; }
-  };
+  try {
+    if (!el) return false;
+    const n = (el.getAttribute('name') || '').toLowerCase();
+    const s = (el.getAttribute('src') || '').toLowerCase();
+
+    // Only treat Funding Choices consent iframe as "bad"
+    // (googlefcPresent / fundingchoicesmessages)
+    return (
+      n === 'googlefcpresent' ||
+      s.includes('fundingchoicesmessages.google.com') ||
+      s.includes('fundingchoices')
+    );
+  } catch {
+    return false;
+  }
+};
+
 
   // 1) Patch iframe.focus to ignore bad iframes
   const origFocus = HTMLIFrameElement.prototype.focus;
