@@ -766,6 +766,19 @@ export default function Page() {
   // NEW: Commute override
   const [commuteOverrideStr, setCommuteOverrideStr] = useState<string>("");
   const commuteOverride = useMemo(() => toNumberSafe(commuteOverrideStr), [commuteOverrideStr]);
+   // Remember the initial commute minutes so we can detect when the user changes it
+  const initialCommuteMinsRef = React.useRef(commuteMinsPerDay);
+
+   // If the user customises commute time or cost, use *their* month in the chart
+useEffect(() => {
+  const hasCustomCommuteTime = commuteMinsPerDay !== initialCommuteMinsRef.current;
+  const hasCustomCommuteCost = commuteOverride > 0;
+
+  if (hasCustomCommuteTime || hasCustomCommuteCost) {
+    setChartUseBaseline(false);
+  }
+}, [commuteMinsPerDay, commuteOverride]);
+
 
   const [debtMonthly, setDebtMonthly] = useState<number>(150);
   const [studentLoan, setStudentLoan] = useState<number>(0);
@@ -793,8 +806,9 @@ export default function Page() {
   const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0);
 
   // --- Chart toggles ---
-  const [chartUseBaseline, setChartUseBaseline] = useState<boolean>(true);
-  const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
+const [chartUseBaseline, setChartUseBaseline] = useState<boolean>(false); // default: your month
+const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
+
 
   // Derived
   const urb = URBANICITY[urbanicity];
