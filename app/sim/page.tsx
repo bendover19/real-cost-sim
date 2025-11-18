@@ -1389,7 +1389,15 @@ useEffect(() => {
 
           <div>
             <label className="text-sm">Hours you actually work each week (not counting commute)</label>
-<InputRange ... value={hoursWeek} ... />
+
+  <InputRange
+    min={10}
+    max={80}
+    step={1}
+    value={hoursWeek}
+    onValue={setHoursWeek}
+    className="w-full mt-2"
+  />
 <div className="text-xs text-zinc-500 mt-1">
   {hoursWeek} hours / week at work
 </div>
