@@ -4,8 +4,9 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
-  title: "Real Cost Simulator",
-  description: "See your hour of freedom after the real costs of work.",
+  title: "Real Cost of Working Calculator | Commute, Rent & Remote Work",
+  description:
+    "Free calculator that shows your real hourly income after rent, commute, childcare, debt and ‘maintenance’ costs. See if remote work or moving is actually worth it.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
