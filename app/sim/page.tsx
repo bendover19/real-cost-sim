@@ -820,7 +820,7 @@ const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
 
   const commuteHoursPerWeek = useMemo(
   () =>
-    transportMode === "remote" || transportMode === "walk"
+    transportMode === "remote"
       ? 0
       : (commuteMinsPerDay * officeDaysPerWeek) / 60,
   [transportMode, commuteMinsPerDay, officeDaysPerWeek]
