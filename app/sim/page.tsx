@@ -794,7 +794,6 @@ export default function Page() {
 
   // --- Chart toggles ---
   const [chartUseBaseline, setChartUseBaseline] = useState<boolean>(true);
-  const [chartToggleTouched, setChartToggleTouched] = useState<boolean>(false);
   const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
 
   // Derived
@@ -954,11 +953,12 @@ export default function Page() {
   }, [baselineLeftover, hoursPerMonth]);
 
   // --- Auto switch chart to "Your month" when commute is already zero ---
-  useEffect(() => {
-    if ((transportMode === "remote" || transportMode === "walk") && chartUseBaseline && !chartToggleTouched) {
-      setChartUseBaseline(false);
-    }
-  }, [transportMode, chartUseBaseline, chartToggleTouched]);
+useEffect(() => {
+  if (transportMode === "remote" || transportMode === "walk") {
+    setChartUseBaseline(false);
+  }
+}, [transportMode]);
+
 
   // --- Challenge-mode derived values ---
   // Base commute cost for "0 remote days" in money terms
@@ -1860,16 +1860,13 @@ export default function Page() {
             {/* Toggles & chart (NOT part of screenshot) */}
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-zinc-300">
               <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={chartUseBaseline}
-                  onChange={(e) => {
-                    setChartUseBaseline(e.target.checked);
-                    setChartToggleTouched(true);
-                  }}
-                />
-                Use typical transit costs in chart (auto unchecked if remote)
-              </label>
+    <input
+      type="checkbox"
+      checked={chartUseBaseline}
+      onChange={(e) => setChartUseBaseline(e.target.checked)}
+    />
+    Use typical transit costs in chart (auto unchecked if remote)
+  </label>
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
