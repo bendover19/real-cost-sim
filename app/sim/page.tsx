@@ -2,15 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 /*import html2canvas from "html2canvas";*/
-import type { Metadata } from "next";
-/*import html2canvas from "html2canvas";*/
 
-/** Page-specific metadata for /sim */
-export const metadata: Metadata = {
-  title: "Real Cost Simulator – Interactive Calculator",
-  description:
-    "Adjust income, hours, commute time and lifestyle costs to see how much money and time you actually keep each month.",
-};
 /* ============================================================
    Real Cost Simulator — page.tsx
    - Sliders unchanged
