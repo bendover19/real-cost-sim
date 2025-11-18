@@ -90,6 +90,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Google Funding Choices loader (kept), but we REMOVE their helper that injects googlefcPresent */}
         <script async src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"></script>
+
+        <script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FinancialCalculator",
+      "name": "Real Cost Simulator",
+      "description":
+        "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "All",
+      "url": "https://realcostsimulator.com", // ← replace with your domain
+      "patchNotes":
+        "Supports UK cities, remote work, commute time, and cost-of-living comparisons."
+    }),
+  }}
+/>
+
+        
       </head>
 
       <body className="min-h-screen flex flex-col">
