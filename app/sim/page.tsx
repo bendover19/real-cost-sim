@@ -1798,7 +1798,7 @@ export default function Page() {
                   color: "#f9fafb",
                   borderRadius: "16px",
                   padding: "20px",
-                  boxShadow: "0 18px 40px rgba(15,23,42,0.55)",
+                  boxShadow: "0 12px 30px rgba(15,23,42,0.4)",
                   border: "1px solid rgba(251,113,133,0.55)",
                   fontFamily:
                     "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif",
