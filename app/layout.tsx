@@ -104,7 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
               applicationCategory: "FinanceApplication",
               operatingSystem: "All",
-              url: "https://real-cost-sim.vercel.app",
+              url: "https://real-cost-sim.com",
               patchNotes:
                 "Supports UK cities, remote work, commute time, and cost-of-living comparisons.",
             }),
