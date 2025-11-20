@@ -13,7 +13,7 @@ const navItems = [
   { href: "/remote-vs-office-calculator", label: "Remote vs Office Pay Calculator" },
   { href: "/move-city-cost-of-living-calculator", label: "Cost of Moving City" },
   { href: "/uk-cost-of-working-calculator", label: "UK–EU–US Salary Comparison" },
-  { href: "/parent-childcare-cost-of-working-calculator", label: "Parent / Childcare Cost of Working" },
+  { href: "/part-time-vs-full-time-hourly-pay", label: "Part-time vs Full-time hourly pay" },
   { href: "/privacy", label: "Privacy Policy" },
 ];
 
