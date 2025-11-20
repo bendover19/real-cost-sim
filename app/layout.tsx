@@ -2,7 +2,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
-import Header from "@/components/header.tsx";
+import type { ReactNode } from "react";
+import Header from "./components/Header";
 
 export const metadata: Metadata = {
   title: "Real Cost of Working Calculator | Commute, Rent & Remote Work",
@@ -10,74 +11,82 @@ export const metadata: Metadata = {
     "Free calculator that shows your real hourly income after rent, commute, childcare, debt and ‘maintenance’ costs. See if remote work or moving is actually worth it.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* ---- Run BEFORE any third-party scripts ---- */}
+        {/* ---- Run BEFORE any third-party scripts: block focus thieves ---- */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
 (function(){
+  // Helpers
   const isBadIframe = (el) => {
     try {
       if (!el) return false;
       const n = (el.getAttribute('name') || '').toLowerCase();
       const s = (el.getAttribute('src') || '').toLowerCase();
+
+      // Only treat Funding Choices consent iframe as "bad"
+      // (googlefcPresent / fundingchoicesmessages)
       return (
         n === 'googlefcpresent' ||
         s.includes('fundingchoicesmessages.google.com') ||
         s.includes('fundingchoices')
       );
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   };
 
+  // 1) Patch iframe.focus to ignore bad iframes
   const origFocus = HTMLIFrameElement.prototype.focus;
   HTMLIFrameElement.prototype.focus = function(...args){
     if (isBadIframe(this)) return;
     return origFocus.apply(this, args);
   };
 
+  // 2) Whenever DOM changes, neuter new bad iframes immediately
   const tameRoot = (root=document) => {
     root.querySelectorAll?.('iframe').forEach((f)=>{
       if (!isBadIframe(f)) return;
-      try {
+      try{
         f.tabIndex = -1;
         f.setAttribute('aria-hidden','true');
         const st = f.style;
-        st.pointerEvents = 'none';
-        st.opacity = '0';
-        st.width = '0';
-        st.height = '0';
-        st.position = 'absolute';
-        st.left = '-99999px';
-        st.top = '-99999px';
-      } catch {}
+        st.pointerEvents='none';
+        st.opacity='0';
+        st.width='0';
+        st.height='0';
+        st.position='absolute';
+        st.left='-99999px';
+        st.top='-99999px';
+      }catch{}
     });
   };
-
   tameRoot(document);
-  const mo = new MutationObserver(muts => muts.forEach(m => {
-    m.addedNodes.forEach(n => {
-      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n);
+  const mo = new MutationObserver(muts => muts.forEach(m=>{
+    m.addedNodes.forEach(n=>{
+      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n as any);
     });
   }));
-  mo.observe(document.documentElement, { childList: true, subtree: true });
+  mo.observe(document.documentElement,{childList:true,subtree:true});
 
-  const kill = (e) => {
-    const t = e.target;
-    if (t instanceof HTMLIFrameElement && isBadIframe(t)) {
-      try { t.blur?.(); } catch {}
-      e.stopImmediatePropagation();
-      e.preventDefault();
-    }
+  // 3) Block focus events bubbling from those iframes (belt & braces)
+  const kill = (e)=>{ 
+    const t=e.target; 
+    if (t instanceof HTMLIFrameElement && isBadIframe(t)) { 
+      try{t.blur?.()}catch{} 
+      e.stopImmediatePropagation(); 
+      e.preventDefault(); 
+    } 
   };
   window.addEventListener('focusin', kill, true);
   window.addEventListener('pointerdown', kill, true);
   window.addEventListener('mousedown', kill, true);
   window.addEventListener('touchstart', kill, true);
 })();
-          `,
+            `,
           }}
         />
 
@@ -86,15 +95,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
           crossOrigin="anonymous"
-        />
+        ></script>
 
-        {/* Funding Choices */}
-        <script
-          async
-          src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"
-        />
+        {/* Google Funding Choices loader */}
+        <script async src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"></script>
 
-        {/* Schema.org Structured Data */}
+        {/* Structured data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -106,7 +112,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
               applicationCategory: "FinanceApplication",
               operatingSystem: "All",
-              url: "https://real-cost-sim.vercel.app", // fixed domain
+              url: "https://real-cost-sim.vercel.app",
               patchNotes:
                 "Supports UK cities, remote work, commute time, and cost-of-living comparisons.",
             }),
@@ -115,13 +121,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body className="min-h-screen flex flex-col">
-        {/* -------------- HEADER (Apple-minimal nav) -------------- */}
         <Header />
-
-        {/* -------------- MAIN CONTENT -------------- */}
         <main className="flex-grow">{children}</main>
 
-        {/* -------------- FOOTER -------------- */}
         <footer className="text-center text-sm text-zinc-500 py-8 border-t border-zinc-800">
           <p>
             © {new Date().getFullYear()} Real Cost Simulator —{" "}
