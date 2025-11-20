@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import Header from "@/components/Header";
 
-
 export const metadata: Metadata = {
   title: "Real Cost of Working Calculator | Commute, Rent & Remote Work",
   description:
@@ -15,109 +14,114 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* ---- Run BEFORE any third-party scripts: block focus thieves ---- */}
+        {/* ---- Run BEFORE any third-party scripts ---- */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
 (function(){
-  // Helpers
   const isBadIframe = (el) => {
-  try {
-    if (!el) return false;
-    const n = (el.getAttribute('name') || '').toLowerCase();
-    const s = (el.getAttribute('src') || '').toLowerCase();
+    try {
+      if (!el) return false;
+      const n = (el.getAttribute('name') || '').toLowerCase();
+      const s = (el.getAttribute('src') || '').toLowerCase();
+      return (
+        n === 'googlefcpresent' ||
+        s.includes('fundingchoicesmessages.google.com') ||
+        s.includes('fundingchoices')
+      );
+    } catch { return false; }
+  };
 
-    // Only treat Funding Choices consent iframe as "bad"
-    // (googlefcPresent / fundingchoicesmessages)
-    return (
-      n === 'googlefcpresent' ||
-      s.includes('fundingchoicesmessages.google.com') ||
-      s.includes('fundingchoices')
-    );
-  } catch {
-    return false;
-  }
-};
-
-
-  // 1) Patch iframe.focus to ignore bad iframes
   const origFocus = HTMLIFrameElement.prototype.focus;
   HTMLIFrameElement.prototype.focus = function(...args){
     if (isBadIframe(this)) return;
     return origFocus.apply(this, args);
   };
 
-  // 2) Whenever DOM changes, neuter new bad iframes immediately
   const tameRoot = (root=document) => {
     root.querySelectorAll?.('iframe').forEach((f)=>{
       if (!isBadIframe(f)) return;
-      try{
+      try {
         f.tabIndex = -1;
         f.setAttribute('aria-hidden','true');
         const st = f.style;
-        st.pointerEvents='none';
-        st.opacity='0';
-        st.width='0';
-        st.height='0';
-        st.position='absolute';
-        st.left='-99999px';
-        st.top='-99999px';
-      }catch{}
+        st.pointerEvents = 'none';
+        st.opacity = '0';
+        st.width = '0';
+        st.height = '0';
+        st.position = 'absolute';
+        st.left = '-99999px';
+        st.top = '-99999px';
+      } catch {}
     });
   };
+
   tameRoot(document);
-  const mo = new MutationObserver(muts => muts.forEach(m=>{
-    m.addedNodes.forEach(n=>{
-      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n as any);
+  const mo = new MutationObserver(muts => muts.forEach(m => {
+    m.addedNodes.forEach(n => {
+      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n);
     });
   }));
-  mo.observe(document.documentElement,{childList:true,subtree:true});
+  mo.observe(document.documentElement, { childList: true, subtree: true });
 
-  // 3) Block focus events bubbling from those iframes (belt & braces)
-  const kill = (e)=>{ const t=e.target; if (t instanceof HTMLIFrameElement && isBadIframe(t)) { try{t.blur?.()}catch{} e.stopImmediatePropagation(); e.preventDefault(); } };
+  const kill = (e) => {
+    const t = e.target;
+    if (t instanceof HTMLIFrameElement && isBadIframe(t)) {
+      try { t.blur?.(); } catch {}
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }
+  };
   window.addEventListener('focusin', kill, true);
   window.addEventListener('pointerdown', kill, true);
   window.addEventListener('mousedown', kill, true);
   window.addEventListener('touchstart', kill, true);
 })();
-            `,
+          `,
           }}
         />
 
-        {/* Google AdSense (ok to keep) */}
+        {/* Google AdSense */}
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
           crossOrigin="anonymous"
-        ></script>
+        />
 
-        {/* Google Funding Choices loader (kept), but we REMOVE their helper that injects googlefcPresent */}
-        <script async src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"></script>
-
+        {/* Funding Choices */}
         <script
-  type="application/ld+json"
-  dangerouslySetInnerHTML={{
-    __html: JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "FinancialCalculator",
-      "name": "Real Cost Simulator",
-      "description":
-        "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
-      "applicationCategory": "FinanceApplication",
-      "operatingSystem": "All",
-      "url": "real-cost-sim.vercel.app", // ← replace with your domain
-      "patchNotes":
-        "Supports UK cities, remote work, commute time, and cost-of-living comparisons."
-    }),
-  }}
-/>
+          async
+          src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"
+        />
 
-        
+        {/* Schema.org Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FinancialCalculator",
+              name: "Real Cost Simulator",
+              description:
+                "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
+              applicationCategory: "FinanceApplication",
+              operatingSystem: "All",
+              url: "https://real-cost-sim.vercel.app", // fixed domain
+              patchNotes:
+                "Supports UK cities, remote work, commute time, and cost-of-living comparisons.",
+            }),
+          }}
+        />
       </head>
 
       <body className="min-h-screen flex flex-col">
+        {/* -------------- HEADER (Apple-minimal nav) -------------- */}
+        <Header />
+
+        {/* -------------- MAIN CONTENT -------------- */}
         <main className="flex-grow">{children}</main>
 
+        {/* -------------- FOOTER -------------- */}
         <footer className="text-center text-sm text-zinc-500 py-8 border-t border-zinc-800">
           <p>
             © {new Date().getFullYear()} Real Cost Simulator —{" "}
