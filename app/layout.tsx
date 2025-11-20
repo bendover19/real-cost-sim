@@ -1,140 +1,137 @@
-// app/layout.tsx
-import "./globals.css";
-import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/react";
-import type { ReactNode } from "react";
-import Header from "./components/header";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Real Cost of Working Calculator | Commute, Rent & Remote Work",
-  description:
-    "Free calculator that shows your real hourly income after rent, commute, childcare, debt and ‘maintenance’ costs. See if remote work or moving is actually worth it.",
-};
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
-export default function RootLayout({ children }: { children: ReactNode }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* ---- Run BEFORE any third-party scripts: block focus thieves ---- */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-(function(){
-  // Helpers
-  const isBadIframe = (el) => {
-    try {
-      if (!el) return false;
-      const n = (el.getAttribute('name') || '').toLowerCase();
-      const s = (el.getAttribute('src') || '').toLowerCase();
+function classNames(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
 
-      // Only treat Funding Choices consent iframe as "bad"
-      // (googlefcPresent / fundingchoicesmessages)
-      return (
-        n === 'googlefcpresent' ||
-        s.includes('fundingchoicesmessages.google.com') ||
-        s.includes('fundingchoices')
-      );
-    } catch {
-      return false;
+export default function Header() {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
-  };
 
-  // 1) Patch iframe.focus to ignore bad iframes
-  const origFocus = HTMLIFrameElement.prototype.focus;
-  HTMLIFrameElement.prototype.focus = function(...args){
-    if (isBadIframe(this)) return;
-    return origFocus.apply(this, args);
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
 
-  // 2) Whenever DOM changes, neuter new bad iframes immediately
-  const tameRoot = (root=document) => {
-    root.querySelectorAll?.('iframe').forEach((f)=>{
-      if (!isBadIframe(f)) return;
-      try{
-        f.tabIndex = -1;
-        f.setAttribute('aria-hidden','true');
-        const st = f.style;
-        st.pointerEvents='none';
-        st.opacity='0';
-        st.width='0';
-        st.height='0';
-        st.position='absolute';
-        st.left='-99999px';
-        st.top='-99999px';
-      }catch{}
-    });
-  };
-  tameRoot(document);
-  const mo = new MutationObserver(muts => muts.forEach(m=>{
-    m.addedNodes.forEach(n=>{
-      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n as any);
-    });
-  }));
-  mo.observe(document.documentElement,{childList:true,subtree:true});
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, []);
 
-  // 3) Block focus events bubbling from those iframes (belt & braces)
-  const kill = (e)=>{ 
-    const t=e.target; 
-    if (t instanceof HTMLIFrameElement && isBadIframe(t)) { 
-      try{t.blur?.()}catch{} 
-      e.stopImmediatePropagation(); 
-      e.preventDefault(); 
-    } 
-  };
-  window.addEventListener('focusin', kill, true);
-  window.addEventListener('pointerdown', kill, true);
-  window.addEventListener('mousedown', kill, true);
-  window.addEventListener('touchstart', kill, true);
-})();
-            `,
-          }}
-        />
+  // Close on Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
 
-        {/* Google AdSense */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
-          crossOrigin="anonymous"
-        ></script>
+  return (
+    <header className="fixed top-0 left-0 right-0 z-40 pointer-events-none">
+      <div
+        ref={wrapperRef}
+        className="mx-auto max-w-5xl px-4 pt-4 flex justify-end pointer-events-auto"
+      >
+        <div className="relative">
+          {/* Burger button only */}
+          <button
+            type="button"
+            aria-label="Toggle navigation"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="
+              inline-flex flex-col justify-center items-center
+              w-9 h-9 rounded-full
+              bg-black/5 dark:bg-white/10
+              backdrop-blur
+              hover:bg-black/10 dark:hover:bg-white/20
+              transition
+              border border-white/40 shadow-sm
+            "
+          >
+            <span className="block w-4 h-[1.5px] bg-zinc-900 dark:bg-zinc-100 rounded-full" />
+            <span className="block w-4 h-[1.5px] bg-zinc-900 dark:bg-zinc-100 rounded-full my-[3px]" />
+            <span className="block w-4 h-[1.5px] bg-zinc-900 dark:bg-zinc-100 rounded-full" />
+          </button>
 
-        {/* Google Funding Choices loader */}
-        <script async src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"></script>
+          {/* Floating menu */}
+          <nav
+            className={classNames(
+              "absolute right-0 mt-3 w-64 rounded-2xl",
+              "bg-white/10 dark:bg-zinc-900/80",
+              "backdrop-blur-xl border border-white/30 dark:border-zinc-700",
+              "shadow-lg shadow-black/20 ring-1 ring-black/5",
+              "px-3 py-3 text-sm text-zinc-900 dark:text-zinc-100",
+              "origin-top-right transition-all duration-180 ease-out",
+              open
+                ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+                : "opacity-0 -translate-y-1 scale-95 pointer-events-none"
+            )}
+          >
+            <MenuLink href="/">Home</MenuLink>
+            <MenuLink href="/sim">Start Simulator</MenuLink>
 
-        {/* Structured data */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "FinancialCalculator",
-              name: "Real Cost Simulator",
-              description:
-                "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
-              applicationCategory: "FinanceApplication",
-              operatingSystem: "All",
-              url: "https://real-cost-sim.vercel.app",
-              patchNotes:
-                "Supports UK cities, remote work, commute time, and cost-of-living comparisons.",
-            }),
-          }}
-        />
-      </head>
+            <div className="mt-2 border-t border-white/40 dark:border-zinc-700 pt-2 text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Calculators
+            </div>
+            <MenuLink href="/real-hourly-wage-calculator">
+              Real Hourly Wage Calculator
+            </MenuLink>
+            <MenuLink href="/commute-cost-calculator">
+              True Cost of Commuting
+            </MenuLink>
+            <MenuLink href="/remote-vs-office-calculator">
+              Remote vs Office Pay Calculator
+            </MenuLink>
+            <MenuLink href="/move-city-cost-of-living-calculator">
+              Cost of Moving City
+            </MenuLink>
+            <MenuLink href="/uk-cost-of-working-calculator">
+              UK–EU–US Salary Comparison
+            </MenuLink>
+            {/* If your parent/childcare page has a different slug, just change the href */}
+            <MenuLink href="/parent-childcare-cost-of-working">
+              Parent / Childcare Cost of Working
+            </MenuLink>
 
-      <body className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-grow">{children}</main>
+            <div className="mt-2 border-t border-white/40 dark:border-zinc-700 pt-2">
+              <MenuLink href="/privacy">Privacy Policy</MenuLink>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
+}
 
-        <footer className="text-center text-sm text-zinc-500 py-8 border-t border-zinc-800">
-          <p>
-            © {new Date().getFullYear()} Real Cost Simulator —{" "}
-            <a href="/privacy" className="underline hover:text-zinc-300">
-              Privacy & Cookies Policy
-            </a>
-          </p>
-        </footer>
+interface MenuLinkProps {
+  href: string;
+  children: React.ReactNode;
+}
 
-        <Analytics />
-      </body>
-    </html>
+function MenuLink({ href, children }: MenuLinkProps) {
+  return (
+    <Link
+      href={href}
+      className="
+        block px-2 py-1.5 rounded-md
+        hover:bg-white/40 dark:hover:bg-zinc-800
+        transition-colors
+      "
+    >
+      {children}
+    </Link>
   );
 }
