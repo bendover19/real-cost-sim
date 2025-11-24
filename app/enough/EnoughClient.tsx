@@ -4,7 +4,7 @@ import {
   UK_CITIES,
   UK_SALARY_BANDS,
   approximateNetFromGrossUK,
-} from "../../../cityConfig";
+} from "../cityConfig";
 
 type Params = {
   country: string;
