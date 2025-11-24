@@ -16,10 +16,15 @@ type CityConfig = (typeof UK_CITIES)[number];
 // --------- helpers ----------
 
 // safer city lookup: ignore country, normalise case
-function getCity(citySlug: string): CityConfig | null {
-  const slug = citySlug.toLowerCase();
+function getCity(citySlug: string | string[] | undefined): CityConfig | null {
+  if (!citySlug) return null;
+
+  const slug =
+    Array.isArray(citySlug) ? citySlug[0].toLowerCase() : citySlug.toLowerCase();
+
   return UK_CITIES.find((c) => c.slug.toLowerCase() === slug) ?? null;
 }
+
 
 function classifyLeftoverRatio(ratio: number): {
   label: string;
