@@ -9,7 +9,9 @@ export type CitySlug =
   | "bristol"
   | "leeds"
   | "glasgow"
-  | "edinburgh";
+  | "edinburgh"
+  | "unknown";
+
 
 export interface CityConfig {
   slug: CitySlug;
