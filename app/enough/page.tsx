@@ -4,6 +4,8 @@ import {
   approximateNetFromGrossUK,
 } from "../cityConfig";
 
+export const dynamic = "force-dynamic";
+
 type SearchParams = {
   country?: string;
   city?: string;
