@@ -1,24 +1,56 @@
-// app/enough/page.tsx
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import EnoughClient from "./EnoughClient";
+// app/enough/[country]/[city]/[salary]/page.tsx
 
-export const metadata: Metadata = {
-  title: "Is this salary enough?",
-  description:
-    "Rough estimate of what's left after rent, bills and commute for a single renter in a UK city.",
+import type { Metadata } from "next";
+import EnoughPage from "../../../page";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type Params = {
+  country: string;
+  city: string;
+  salary: string;
 };
 
-export default function EnoughPage() {
-  return (
-    <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
-      <Suspense
-        fallback={
-          <div className="mt-16 text-sm text-zinc-500">Loading the calculator…</div>
-        }
-      >
-        <EnoughClient />
-      </Suspense>
-    </main>
+// Simple dynamic metadata so each pretty URL has a nice title/description
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { city, salary } = params;
+
+  const salaryNum = Number(
+    decodeURIComponent(salary).replace(/[^0-9]/g, "")
   );
+
+  const salaryPretty = Number.isFinite(salaryNum)
+    ? salaryNum.toLocaleString("en-GB", { maximumFractionDigits: 0 })
+    : salary;
+
+  const cityPretty =
+    city.slice(0, 1).toUpperCase() + city.slice(1).toLowerCase();
+
+  return {
+    title: `Is £${salaryPretty} enough to live in ${cityPretty}?`,
+    description: `Rough estimate of whether a £${salaryPretty} salary is enough to live in ${cityPretty}, after typical rent, bills and commute costs.`,
+  };
+}
+
+export default function EnoughPrettyPage({
+  params,
+}: {
+  params: Params;
+}) {
+  const { country, city, salary } = params;
+
+  // Build the same shape that /app/enough/page.tsx expects
+  const searchParams = {
+    country,
+    city,
+    salary,
+  };
+
+  // Re-use the existing server component so the numbers stay identical
+  return <EnoughPage searchParams={searchParams} />;
 }
