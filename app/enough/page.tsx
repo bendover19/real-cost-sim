@@ -13,15 +13,15 @@ export default function EnoughPage() {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
       <Suspense
-        fallback={
-          <div className="mt-16 text-sm text-zinc-500">
-            Loading the calculator…
-          </div>
-        }
-      >
-        {/* @ts-expect-error Client component reads from URL, no props needed */}
-        <EnoughClient />
-      </Suspense>
+  fallback={
+    <div className="mt-16 text-sm text-zinc-500">
+      Loading the calculator…
+    </div>
+  }
+>
+  <EnoughClient />
+</Suspense>
+
     </main>
   );
 }
