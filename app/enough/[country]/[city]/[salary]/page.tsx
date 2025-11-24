@@ -49,9 +49,8 @@ export default function EnoughCityPage({ params }: { params: Params }) {
 
   const matchedCity = getCity(params.city);
 
-  const fallbackCity: CityConfig = {
-    // @ts-expect-error – "unknown" isn't in CitySlug but it's fine for fallback
-    slug: "unknown",
+    const fallbackCity = {
+    slug: "unknown" as any,
     label: "this city",
     country: "uk",
     currency: "£",
@@ -59,7 +58,8 @@ export default function EnoughCityPage({ params }: { params: Params }) {
     typicalBills: 150,
     typicalCommuteCost: 120,
     typicalCommuteMins: 60,
-  };
+  } as CityConfig;
+
 
   const city = matchedCity ?? fallbackCity;
 
