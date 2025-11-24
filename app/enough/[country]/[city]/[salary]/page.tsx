@@ -1,10 +1,9 @@
+// app/enough/[country]/[city]/[salary]/page.tsx
+
 import type { Metadata } from "next";
 import { UK_CITIES, approximateNetFromGrossUK } from "../../../../cityConfig";
 
-// This page is purely server-side, no hooks.
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
+// The dynamic route params from /enough/[country]/[city]/[salary]
 type Params = {
   country: string;
   city: string;
@@ -13,195 +12,197 @@ type Params = {
 
 type CityConfig = (typeof UK_CITIES)[number];
 
-export const metadata: Metadata = {
-  title: "Is this salary enough?",
-  description:
-    "Rough check of whether a salary is enough to live in a given city after rent, bills and commute.",
-};
+// ---------- helpers ----------
 
-// Small helper: find city by slug (case-insensitive)
-function getCity(slug: string | undefined): CityConfig | null {
-  if (!slug) return null;
-  const s = slug.toLowerCase();
-  const found = UK_CITIES.find((c) => c.slug === s);
-  return found ?? null;
+function findCity(slug: string | undefined): CityConfig {
+  if (!slug) return UK_CITIES[0]; // default first city in config
+  const lower = slug.toLowerCase();
+  return (
+    UK_CITIES.find((c) => c.slug.toLowerCase() === lower) ??
+    UK_CITIES[0]
+  );
 }
 
-export default function EnoughCityPage({ params }: { params: Params }) {
-  const { country, city, salary } = params;
+function salaryToNetMonthly(salaryStr: string): number {
+  const grossYear = Number(salaryStr);
+  if (!Number.isFinite(grossYear) || grossYear <= 0) return 0;
 
-  const debugParams = JSON.stringify(params);
+  // If approximateNetFromGrossUK returns yearly net, divide by 12.
+  // If it returns monthly, just remove the "/ 12".
+  const netYear = approximateNetFromGrossUK(grossYear);
+  return Math.round(netYear / 12);
+}
 
-  const cityConfig =
-    getCity(city) ??
-    ({
-      slug: city?.toLowerCase() || "unknown",
-      label: city ? city : "this city",
-      country: country || "uk",
-      currency: "£",
-      typicalRentSingle: 1000,
-      typicalBills: 150,
-      typicalCommuteCost: 120,
-      typicalCommuteMins: 60,
-    } as CityConfig);
+// ---------- metadata (SEO) ----------
 
-  const grossYear = Number(salary) || 0;
-  const netMonth =
-    grossYear > 0 ? approximateNetFromGrossUK(grossYear) / 12 : 0;
+export function generateMetadata(
+  { params }: { params: Params }
+): Metadata {
+  const city = findCity(params.city);
+  const grossYear = Number(params.salary) || 0;
 
-  const rent = cityConfig.typicalRentSingle;
-  const bills = cityConfig.typicalBills;
-  const commute = cityConfig.typicalCommuteCost;
-  const maintenance = 0; // we’ll keep this simple for now
-  const savings = 0;
-
-  const leftover = netMonth - rent - bills - commute - maintenance - savings;
-
-  const verdict =
-    leftover > 800
-      ? "Comfortable for a single person."
-      : leftover > 300
-      ? "Tight but doable if you budget carefully."
-      : leftover > 0
-      ? "Very tight – expect sacrifices."
-      : "Extremely tight / probably not sustainable";
-
-  const currency = cityConfig.currency || "£";
-  const cityLabel = cityConfig.label;
-
-  const formattedGross =
+  const salaryText =
     grossYear > 0
-      ? `${currency}${grossYear.toLocaleString()} / year`
-      : `£0 / year`;
+      ? `£${grossYear.toLocaleString()} salary in ${city.label}`
+      : `Salary in ${city.label}`;
 
-  const formattedNetMonth =
-    netMonth > 0
-      ? `${currency}${Math.round(netMonth).toLocaleString()} / month`
-      : `${currency}0 / month`;
+  return {
+    title: `${salaryText} – is it enough to live there? | Real Cost Simulator`,
+    description: `Rough breakdown of rent, bills, commute and what's left each month for a typical single renter on ${
+      grossYear > 0 ? "£" + grossYear.toLocaleString() : "this salary"
+    } in ${city.label}. Then jump into the Real Cost Simulator to plug in your exact numbers.`
+  };
+}
 
-  const formattedLeftover = `${currency}${Math.round(leftover).toLocaleString()} / month`;
+// ---------- page component ----------
+
+export default function EnoughPage({ params }: { params: Params }) {
+  const city = findCity(params.city);
+  const grossYear = Number(params.salary) || 0;
+  const netMonth = salaryToNetMonthly(params.salary);
+
+  const rent = city.typicalRentSingle;
+  const bills = city.typicalBills;
+  const commute = city.typicalCommuteCost;
+  const leftover = netMonth - rent - bills - commute;
+
+  let verdict: string;
+  if (netMonth <= 0 || leftover <= 0) {
+    verdict = "Extremely tight / probably not sustainable";
+  } else if (leftover < 400) {
+    verdict = "Tight but survivable if you’re very careful";
+  } else {
+    verdict = "Reasonable buffer – still worth checking your exact numbers";
+  }
+
+  // super rough “hour of freedom” – assume 40h/week
+  const freedom =
+    netMonth > 0 ? leftover / (40 * 4.3) : 0;
+
+  // Link into your main simulator (tweak query keys if needed)
+  const simulatorHref = `/sim?region=UK&city=${encodeURIComponent(
+    city.slug
+  )}&income=${grossYear || ""}&utm_source=salary-page`;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-sky-50 text-zinc-900">
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        <section className="bg-white rounded-3xl shadow-sm border border-rose-100 p-6 md:p-8">
-          {/* DEBUG – so we can confirm params are correct */}
-          <div className="text-[11px] text-zinc-500 mb-1">
-            params: {debugParams}
-          </div>
-
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Is {currency}
-            {grossYear.toLocaleString()} enough to live in {cityLabel}?
-          </h1>
-
-          <p className="mt-3 text-sm text-zinc-600 max-w-2xl">
-            Rough estimate of what&apos;s left after typical rent, bills and
-            commute for a single renter in {cityLabel}. It&apos;s ballpark only
-            — the full simulator lets you plug in your exact numbers and
-            lifestyle costs.
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#fee2e2,_#eff6ff)] py-12 px-4 text-zinc-900">
+      <div className="max-w-3xl mx-auto">
+        <section className="bg-white/90 rounded-3xl shadow-xl border border-rose-100 p-6 md:p-8 space-y-6">
+          {/* tiny debug line so we can SEE params now actually work */}
+          <p className="text-[11px] uppercase tracking-wide text-zinc-400">
+            URL params → country: <code>{params.country}</code> · city:{" "}
+            <code>{params.city}</code> · salary:{" "}
+            <code>{params.salary}</code>
           </p>
 
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 text-xs font-medium">
-            <span className="uppercase tracking-wide text-[10px] text-rose-500">
-              Verdict:
-            </span>
-            <span>{verdict}</span>
+          <h1 className="text-2xl md:text-3xl font-semibold">
+            Is{" "}
+            {grossYear > 0
+              ? `£${grossYear.toLocaleString()}`
+              : "this salary"}{" "}
+            enough to live in {city.label}?
+          </h1>
+
+          <p className="text-sm text-zinc-600">
+            Rough estimate of what&apos;s left after typical rent, bills and
+            a normal commute for a single renter in {city.label}. This is
+            just a ball-park view — for proper planning, plug your exact
+            numbers into the Real Cost Simulator below.
+          </p>
+
+          <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs text-rose-700 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            {verdict}
           </div>
 
-          {/* Summary cards */}
-          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-4 text-sm">
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+          {/* headline stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="border rounded-2xl px-3 py-3 bg-zinc-50">
+              <div className="text-[11px] uppercase text-zinc-500">
                 Gross salary
               </div>
-              <div className="mt-1 font-semibold">{formattedGross}</div>
+              <div className="mt-1 font-semibold">
+                {grossYear > 0
+                  ? `£${grossYear.toLocaleString()} / year`
+                  : "Unknown"}
+              </div>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+
+            <div className="border rounded-2xl px-3 py-3 bg-zinc-50">
+              <div className="text-[11px] uppercase text-zinc-500">
                 Est. take-home
               </div>
-              <div className="mt-1 font-semibold">{formattedNetMonth}</div>
+              <div className="mt-1 font-semibold">
+                £{netMonth.toLocaleString()} / month
+              </div>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
+
+            <div className="border rounded-2xl px-3 py-3 bg-zinc-50">
+              <div className="text-[11px] uppercase text-zinc-500">
                 Est. leftover
               </div>
-              <div
-                className={`mt-1 font-semibold ${
-                  leftover >= 0 ? "text-emerald-700" : "text-rose-700"
-                }`}
-              >
-                {formattedLeftover}
+              <div className="mt-1 font-semibold text-rose-600">
+                £{leftover.toLocaleString()} / month
               </div>
             </div>
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-                Hour of freedom
+
+            <div className="border rounded-2xl px-3 py-3 bg-zinc-50">
+              <div className="text-[11px] uppercase text-zinc-500">
+                Hour of freedom*
               </div>
-              <div className="mt-1 font-semibold text-zinc-800">
-                {leftover <= 0 ? "negative" : "coming soon"}
+              <div className="mt-1 font-semibold">
+                {freedom > 0 ? `£${freedom.toFixed(2)} / hr` : "negative"}
+              </div>
+              <div className="mt-1 text-[10px] text-zinc-400">
+                *rough: leftover ÷ 40 hours/week
               </div>
             </div>
           </div>
 
-          {/* Simple breakdown */}
-          <div className="mt-8 text-sm">
-            <h2 className="font-semibold mb-3">
-              Rough monthly breakdown in {cityLabel}
-            </h2>
-            <div className="border rounded-2xl overflow-hidden">
-              <div className="flex justify-between px-4 py-2 border-b bg-zinc-50">
-                <span>Net pay (after tax)</span>
-                <span>
-                  {currency}
-                  {Math.round(netMonth).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between px-4 py-2 border-b">
-                <span>Rent</span>
-                <span>
-                  {currency}
-                  {rent.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between px-4 py-2 border-b">
-                <span>Bills &amp; council tax</span>
-                <span>
-                  {currency}
-                  {bills.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between px-4 py-2 border-b">
-                <span>Commute costs</span>
-                <span>
-                  {currency}
-                  {commute.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between px-4 py-2 bg-zinc-50 font-medium">
-                <span>Estimated leftover</span>
-                <span
-                  className={
-                    leftover >= 0 ? "text-emerald-700" : "text-rose-700"
-                  }
-                >
-                  {formattedLeftover}
-                </span>
-              </div>
+          {/* simple table */}
+          <div className="border rounded-2xl overflow-hidden text-sm">
+            <div className="bg-zinc-50 px-4 py-2 font-medium">
+              Rough monthly breakdown in {city.label}
             </div>
+            <dl className="divide-y text-sm">
+              <div className="flex justify-between px-4 py-2">
+                <dt>Net pay (after tax)</dt>
+                <dd>£{netMonth.toLocaleString()}</dd>
+              </div>
+              <div className="flex justify-between px-4 py-2">
+                <dt>Rent</dt>
+                <dd>£{rent.toLocaleString()}</dd>
+              </div>
+              <div className="flex justify-between px-4 py-2">
+                <dt>Bills & council tax</dt>
+                <dd>£{bills.toLocaleString()}</dd>
+              </div>
+              <div className="flex justify-between px-4 py-2">
+                <dt>
+                  Commute costs{" "}
+                  <span className="text-[11px] text-zinc-400">
+                    ~{city.typicalCommuteMins} mins/day
+                  </span>
+                </dt>
+                <dd>£{commute.toLocaleString()}</dd>
+              </div>
+              <div className="flex justify-between px-4 py-2 font-semibold bg-rose-50">
+                <dt>Estimated leftover</dt>
+                <dd className={leftover >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                  £{leftover.toLocaleString()} / month
+                </dd>
+              </div>
+            </dl>
           </div>
 
-          {/* Link to main simulator */}
-          <div className="mt-8">
-            <h3 className="text-sm font-semibold mb-2">
+          {/* CTA into main simulator */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">
               Try your exact numbers in the Real Cost Simulator
-            </h3>
+            </p>
             <a
-              href={`https://www.real-cost-sim.com/?city=${encodeURIComponent(
-                cityLabel,
-              )}&region=UK`}
-              className="inline-flex items-center rounded-full bg-rose-600 text-white text-sm px-4 py-2 font-medium shadow-sm hover:bg-rose-700 transition"
+              href={simulatorHref}
+              className="inline-flex justify-center items-center rounded-full bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold px-5 py-2 transition"
             >
               Open this scenario in the Real Cost Simulator →
             </a>
