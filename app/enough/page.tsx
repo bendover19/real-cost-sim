@@ -1,15 +1,27 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
+import type { Metadata } from "next";
 import { UK_CITIES, approximateNetFromGrossUK } from "../cityConfig";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type CityConfig = (typeof UK_CITIES)[number];
 
-type SearchParamsShape = {
-  country?: string;
-  city?: string;
-  salary?: string;
+type SearchParams = {
+  country?: string | string[];
+  city?: string | string[];
+  salary?: string | string[];
 };
+
+export const metadata: Metadata = {
+  title: "Is this salary enough?",
+  description:
+    "Check if your salary is enough after rent, commute and the real cost of working.",
+};
+
+function getFirst(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
 
 function getCity(slug?: string | null): CityConfig | null {
   if (!slug) return null;
@@ -30,33 +42,34 @@ function classifyLeftoverRatio(ratio: number) {
   return { label: "Comfortable (on paper)", tone: "good" as const };
 }
 
-export default function EnoughPage() {
-  const sp = useSearchParams();
+export default function EnoughPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
+  const params = searchParams ?? {};
 
-  const searchParams: SearchParamsShape = {
-    country: sp.get("country") ?? undefined,
-    city: sp.get("city") ?? undefined,
-    salary: sp.get("salary") ?? undefined,
+  const countryParam = getFirst(params.country);
+  const citySlug = getFirst(params.city);
+  const salaryParam = getFirst(params.salary);
+
+  const country = (countryParam || "uk").toLowerCase();
+  const salaryYear = Number(salaryParam || "0");
+
+  const matchedCity = getCity(citySlug ?? null);
+
+  const fallbackCity: CityConfig = {
+    slug: "unknown",
+    label: "this city",
+    country: "uk",
+    currency: "£",
+    typicalRentSingle: 1000,
+    typicalBills: 150,
+    typicalCommuteCost: 120,
+    typicalCommuteMins: 60,
   };
 
-  const country = (searchParams.country || "uk").toLowerCase();
-  const citySlug = searchParams.city;
-  const salaryYear = Number(searchParams.salary || "0");
-
-  const matchedCity = getCity(citySlug);
-
-  const city: CityConfig =
-    matchedCity ??
-    ({
-      slug: "unknown",
-      label: "this city",
-      country,
-      currency: "£",
-      typicalRentSingle: 1000,
-      typicalBills: 150,
-      typicalCommuteCost: 120,
-      typicalCommuteMins: 60,
-    } as CityConfig);
+  const city = matchedCity ?? fallbackCity;
 
   const netMonthly = approximateNetFromGrossUK(salaryYear || 0);
   const housing = city.typicalRentSingle;
@@ -84,7 +97,6 @@ export default function EnoughPage() {
   const ratio = netMonthly > 0 ? leftover / netMonthly : -1;
   const verdict = classifyLeftoverRatio(ratio);
 
-  // neighbours for "nearby scenarios"
   const neighbours = [22000, 25000, 28000, 30000, 32000, 35000, 40000].filter(
     (s) => Math.abs(s - salaryYear) <= 10000 && s !== salaryYear
   );
@@ -94,9 +106,9 @@ export default function EnoughPage() {
       <section className="py-10 md:py-16">
         <div className="max-w-3xl mx-auto px-4">
           <div className="bg-white/90 backdrop-blur border border-white/80 rounded-3xl shadow-xl p-6 md:p-8 space-y-6">
-            {/* DEBUG – you can delete this once you're happy */}
+            {/* DEBUG – remove once you're happy */}
             <div className="text-[11px] text-zinc-500 mb-2">
-              searchParams: {JSON.stringify(searchParams)}
+              searchParams: {JSON.stringify(params)}
             </div>
 
             <header className="space-y-3">
