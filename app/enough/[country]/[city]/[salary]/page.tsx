@@ -1,33 +1,68 @@
 import type { Metadata } from "next";
-import {
-  UK_CITIES,
-  approximateNetFromGrossUK,
-} from "../../../../cityConfig";
+import { UK_CITIES, approximateNetFromGrossUK } from "../../../../cityConfig";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// -------- types (local, simple) --------
 type Params = {
   country: string;
   city: string;
   salary: string;
 };
 
-type CityConfig = (typeof UK_CITIES)[number];
+type CityConfig = {
+  slug: string;
+  label: string;
+  country: string;
+  currency: string;
+  typicalRentSingle: number;
+  typicalBills: number;
+  typicalCommuteCost: number;
+  typicalCommuteMins: number;
+};
 
 export const metadata: Metadata = {
   title: "Is this salary enough?",
   description:
-    "Check if your salary is enough after rent, commute and the real cost of working.",
+    "Check if your salary is enough after rent, housing, commute and the real cost of working.",
 };
 
-// Find a city by slug (case-insensitive)
+// -------- helpers (defensive) --------
+
+function safeCities(): CityConfig[] {
+  if (Array.isArray(UK_CITIES)) {
+    return UK_CITIES as CityConfig[];
+  }
+  return [];
+}
+
 function getCity(slug: string): CityConfig | null {
-  const s = slug.toLowerCase();
-  return UK_CITIES.find((c) => c.slug.toLowerCase() === s) ?? null;
+  const s = (slug || "").toLowerCase();
+  const cities = safeCities();
+  return cities.find((c) => c.slug.toLowerCase() === s) ?? null;
+}
+
+function safeNetFromGross(grossYear: number): number {
+  const g = Number.isFinite(grossYear) ? grossYear : 0;
+  if (typeof approximateNetFromGrossUK === "function") {
+    try {
+      return approximateNetFromGrossUK(g);
+    } catch {
+      // fall back to very rough 75% net assumption
+    }
+  }
+  const monthlyGross = g / 12;
+  return Math.round(monthlyGross * 0.75);
 }
 
 function classifyLeftoverRatio(ratio: number) {
+  if (!Number.isFinite(ratio)) {
+    return {
+      label: "Extremely tight / probably not sustainable",
+      tone: "bad" as const,
+    };
+  }
   if (ratio < 0.05)
     return {
       label: "Extremely tight / probably not sustainable",
@@ -40,51 +75,52 @@ function classifyLeftoverRatio(ratio: number) {
   return { label: "Comfortable (on paper)", tone: "good" as const };
 }
 
+// -------- page --------
+
 export default function EnoughCityPage({ params }: { params: Params }) {
-  // DEBUG: show what Next is actually giving us
+  const { country, city: citySlug, salary } = params;
+
+  // DEBUG so we can see what Next passes in
   const debugParams = JSON.stringify(params);
 
-  const country = params.country.toLowerCase();
-  const salaryYear = Number(params.salary) || 0;
+  const salaryYear = Number(salary) || 0;
 
-  const matchedCity = getCity(params.city);
-
-    const fallbackCity = {
-    slug: "unknown" as any,
+  const fallbackCity: CityConfig = {
+    slug: "unknown",
     label: "this city",
-    country: "uk",
+    country: (country || "uk").toLowerCase(),
     currency: "£",
     typicalRentSingle: 1000,
     typicalBills: 150,
     typicalCommuteCost: 120,
     typicalCommuteMins: 60,
-  } as CityConfig;
+  };
 
+  const matchedCity = getCity(citySlug);
+  const cityCfg = matchedCity ?? fallbackCity;
 
-  const city = matchedCity ?? fallbackCity;
+  const netMonthly = safeNetFromGross(salaryYear);
 
-  const netMonthly = approximateNetFromGrossUK(salaryYear);
-  const housing = city.typicalRentSingle;
-  const bills = city.typicalBills;
-  const commuteCost = city.typicalCommuteCost;
+  const housing = cityCfg.typicalRentSingle;
+  const bills = cityCfg.typicalBills;
+  const commuteCost = cityCfg.typicalCommuteCost;
 
+  // simple generic assumptions – tweak later
   const maintenance = Math.round(netMonthly * 0.2);
   const savings = Math.round(netMonthly * 0.08);
 
-  const totalCosts =
-    housing + bills + commuteCost + maintenance + savings;
+  const totalCosts = housing + bills + commuteCost + maintenance + savings;
   const leftover = netMonthly - totalCosts;
 
   const hoursWeekWork = 40;
-  const hoursWeekCommute = (city.typicalCommuteMins * 5) / 60;
+  const hoursWeekCommute = (cityCfg.typicalCommuteMins * 5) / 60;
   const hoursMonth = Math.round((hoursWeekWork + hoursWeekCommute) * 4.3);
   const freedomPerHour =
-    hoursMonth > 0 ? leftover / hoursMonth : 0;
+    hoursMonth > 0 ? Math.round((leftover / hoursMonth) * 100) / 100 : 0;
 
-  const currency = city.currency;
-  const niceSalary = salaryYear
-    ? `£${salaryYear.toLocaleString()}`
-    : "£0";
+  const currency = cityCfg.currency || "£";
+  const niceSalary =
+    salaryYear > 0 ? `${currency}${salaryYear.toLocaleString()}` : `${currency}0`;
 
   const ratio = netMonthly > 0 ? leftover / netMonthly : -1;
   const verdict = classifyLeftoverRatio(ratio);
@@ -99,18 +135,17 @@ export default function EnoughCityPage({ params }: { params: Params }) {
         <div className="max-w-3xl mx-auto px-4">
           <div className="bg-white/90 backdrop-blur border border-white/80 rounded-3xl shadow-xl p-6 md:p-8 space-y-6">
             {/* DEBUG – remove once happy */}
-            <div className="text-[11px] text-zinc-500 mb-2">
+            <div className="text-[11px] text-zinc-500 mb-1">
               params: {debugParams}
             </div>
 
             <header className="space-y-3">
               <h1 className="text-2xl md:text-3xl font-semibold text-zinc-900 leading-tight">
-                Is {niceSalary} enough to live in {city.label}?
+                Is {niceSalary} enough to live in {cityCfg.label}?
               </h1>
               <p className="text-zinc-700 text-sm md:text-base">
-                Rough estimate of what&apos;s left after rent, bills,
-                commute and the real cost of staying employable in{" "}
-                {city.label}.
+                Rough estimate of what&apos;s left after rent, bills, commute
+                and the real cost of staying employable in {cityCfg.label}.
               </p>
               <div
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
@@ -151,14 +186,19 @@ export default function EnoughCityPage({ params }: { params: Params }) {
               <h3 className="text-sm font-semibold text-zinc-900">
                 Explore nearby scenarios
               </h3>
+              <p className="text-xs text-zinc-600">
+                These links keep the same city but nudge the salary up or down.
+              </p>
               <div className="flex flex-wrap gap-2 text-xs">
                 {neighbours.map((s) => (
                   <a
                     key={s}
-                    href={`/enough/${country}/${city.slug}/${s}`}
+                    href={`/enough/${country.toLowerCase()}/${cityCfg.slug}/${s}`}
                     className="px-3 py-1.5 rounded-full border border-zinc-200 bg-white/80 hover:border-rose-400 hover:text-rose-700 transition"
                   >
-                    {`Is £${s.toLocaleString()} enough in ${city.label}?`}
+                    {`Is ${currency}${s.toLocaleString()} enough in ${
+                      cityCfg.label
+                    }?`}
                   </a>
                 ))}
               </div>
