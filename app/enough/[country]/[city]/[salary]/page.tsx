@@ -6,7 +6,7 @@ import {
 } from "../../../cityConfig";
 
 type Params = {
-  country: "uk";
+  country: string; // we'll ignore this for now
   city: string;
   salary: string;
 };
@@ -14,11 +14,11 @@ type Params = {
 type CityConfig = (typeof UK_CITIES)[number];
 
 // --------- helpers ----------
-function getCity(country: string, citySlug: string): CityConfig | null {
-  if (country === "uk") {
-    return UK_CITIES.find((c) => c.slug === citySlug) ?? null;
-  }
-  return null;
+
+// safer city lookup: ignore country, normalise case
+function getCity(citySlug: string): CityConfig | null {
+  const slug = citySlug.toLowerCase();
+  return UK_CITIES.find((c) => c.slug.toLowerCase() === slug) ?? null;
 }
 
 function classifyLeftoverRatio(ratio: number): {
@@ -54,8 +54,9 @@ export function generateStaticParams(): Params[] {
 
 // --------- metadata per page ----------
 export function generateMetadata({ params }: { params: Params }): Metadata {
-  const city = getCity(params.country, params.city);
+  const city = getCity(params.city);
   const salary = Number(params.salary);
+
   if (!city || !Number.isFinite(salary)) {
     return {
       title: "Is this salary enough?",
@@ -72,33 +73,31 @@ export function generateMetadata({ params }: { params: Params }): Metadata {
 
 // --------- the page itself ----------
 export default function Page({ params }: { params: Params }) {
-  const city = getCity(params.country, params.city);
   const salaryYear = Number(params.salary);
+  const city = getCity(params.city);
 
-  if (!city || !Number.isFinite(salaryYear)) {
-    return (
-      <main className="max-w-3xl mx-auto px-4 py-12">
-        <h1 className="text-2xl font-semibold mb-2">
-          Is this salary enough to live here?
-        </h1>
-        <p className="text-zinc-600">
-          Something went wrong with this URL. Try starting from the simulator
-          instead.
-        </p>
-      </main>
-    );
-  }
+  const safeSalary = Number.isFinite(salaryYear) ? salaryYear : 0;
+  const cityOrFallback =
+    city ??
+    ({
+      slug: params.city,
+      label: params.city,
+      country: "uk",
+      currency: "£",
+      typicalRentSingle: 1000,
+      typicalBills: 150,
+      typicalCommuteCost: 120,
+      typicalCommuteMins: 60,
+    } as CityConfig);
 
-  // --- core approximations ---
-  const netMonthly = approximateNetFromGrossUK(salaryYear);
-  const housing = city.typicalRentSingle;
-  const bills = city.typicalBills;
-  const commuteCost = city.typicalCommuteCost;
-  const commuteMinsPerDay = city.typicalCommuteMins;
+  const netMonthly = approximateNetFromGrossUK(safeSalary);
+  const housing = cityOrFallback.typicalRentSingle;
+  const bills = cityOrFallback.typicalBills;
+  const commuteCost = cityOrFallback.typicalCommuteCost;
+  const commuteMinsPerDay = cityOrFallback.typicalCommuteMins;
 
-  // rough “maintenance” + savings
-  const maintenance = Math.round(netMonthly * 0.2); // tweak later
-  const savings = Math.round(netMonthly * 0.08); // 8% savings/pension
+  const maintenance = Math.round(netMonthly * 0.2);
+  const savings = Math.round(netMonthly * 0.08);
   const otherFixed = 0;
 
   const totalCosts =
@@ -106,9 +105,8 @@ export default function Page({ params }: { params: Params }) {
   const leftover = netMonthly - totalCosts;
   const leftoverRatio = netMonthly > 0 ? leftover / netMonthly : -1;
 
-  // time: 40h work + commute
   const hoursWeekWork = 40;
-  const hoursWeekCommute = (commuteMinsPerDay * 5) / 60; // 5 days/week
+  const hoursWeekCommute = (commuteMinsPerDay * 5) / 60;
   const totalHoursWeek = hoursWeekWork + hoursWeekCommute;
   const hoursMonth = Math.round(totalHoursWeek * 4.3);
   const freedomPerHour =
@@ -116,11 +114,11 @@ export default function Page({ params }: { params: Params }) {
 
   const verdict = classifyLeftoverRatio(leftoverRatio);
 
-  const currency = city.currency;
-  const niceSalary = `£${salaryYear.toLocaleString()}`;
+  const currency = cityOrFallback.currency;
+  const niceSalary = `£${safeSalary.toLocaleString()}`;
 
   const neighbours = UK_SALARY_BANDS.filter(
-    (s) => Math.abs(s - salaryYear) <= 10000 && s !== salaryYear
+    (s) => Math.abs(s - safeSalary) <= 10000 && s !== safeSalary
   );
 
   return (
@@ -128,13 +126,22 @@ export default function Page({ params }: { params: Params }) {
       <section className="py-10 md:py-16">
         <div className="max-w-3xl mx-auto px-4">
           <div className="bg-white/90 backdrop-blur border border-white/80 rounded-3xl shadow-xl p-6 md:p-8 space-y-6">
+            {/* DEBUG STRIP – you can delete once you see it working */}
+            <div className="text-[11px] text-zinc-500 mb-2">
+              <div>params: {JSON.stringify(params)}</div>
+              <div>
+                matchedCity:{" "}
+                {city ? city.slug : "NONE – using fallback config"}
+              </div>
+            </div>
+
             {/* H1 + summary */}
             <header className="space-y-3">
               <h1 className="text-2xl md:text-3xl font-semibold text-zinc-900 leading-tight">
-                Is {niceSalary} enough to live in {city.label}?
+                Is {niceSalary} enough to live in {cityOrFallback.label}?
               </h1>
               <p className="text-zinc-700 text-sm md:text-base">
-                This takes a typical single renter in {city.label} on{" "}
+                This takes a typical single renter in {cityOrFallback.label} on{" "}
                 <strong>{niceSalary}</strong> and estimates what&apos;s left
                 after rent, bills, commute and the{" "}
                 <span className="underline decoration-rose-400 decoration-2">
@@ -179,14 +186,14 @@ export default function Page({ params }: { params: Params }) {
               />
             </div>
 
-            {/* cost breakdown */}
+            {/* breakdown */}
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-zinc-900">
-                Rough monthly breakdown in {city.label}
+                Rough monthly breakdown in {cityOrFallback.label}
               </h2>
               <p className="text-sm text-zinc-700">
-                These are ballpark numbers for a single person renting in{" "}
-                {city.label}, working full time, commuting about{" "}
+                Ballpark numbers for a single person renting in{" "}
+                {cityOrFallback.label}, commuting about{" "}
                 {commuteMinsPerDay} minutes per workday.
               </p>
 
@@ -234,57 +241,18 @@ export default function Page({ params }: { params: Params }) {
                   </tbody>
                 </table>
               </div>
-
-              <p className="text-xs text-zinc-600">
-                This doesn&apos;t include every possible cost (groceries, pets,
-                debt), but it captures the big things that tend to scale with
-                income and location.
-              </p>
             </section>
 
-            {/* real cost of working explainer */}
-            <section className="space-y-2 text-sm text-zinc-700">
-              <h2 className="text-lg font-semibold text-zinc-900">
-                Why this feels different from a normal salary calculator
-              </h2>
-              <p>
-                Most calculators stop at tax and maybe rent. This estimate also
-                bakes in the <strong>real cost of working</strong>: commute time
-                and money, the extra spending you do to stay functional, and the
-                fact that your job actually takes{" "}
-                <strong>{totalHoursWeek.toFixed(1)} hours a week</strong> once
-                you include travelling.
-              </p>
-              <p>
-                That&apos;s why we look at your{" "}
-                <strong>hour of freedom</strong> — how much truly discretionary
-                money is left for every hour of life you pour into the job.
-              </p>
-            </section>
-
-            {/* CTA to simulator */}
+            {/* CTA */}
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-zinc-900">
                 Try your exact numbers in the Real Cost Simulator
               </h2>
-              <p className="text-sm text-zinc-700">
-                Your own rent, commute and lifestyle might be very different
-                from these defaults. The simulator lets you plug in:
-              </p>
-              <ul className="text-sm text-zinc-700 list-disc pl-5 space-y-1">
-                <li>Your actual rent (or house share)</li>
-                <li>Your real commute minutes and how many days you go in</li>
-                <li>Remote days, kids, debt, health and “maintenance” spends</li>
-                <li>
-                  And see how your <strong>hour of freedom</strong> changes when
-                  you tweak them.
-                </li>
-              </ul>
 
               <a
-                href={`/sim?region=UK&city=${encodeURIComponent(
-                  city.label
-                )}&gross=${salaryYear}`}
+                href={`/cost-of-working-calculator?region=UK&city=${encodeURIComponent(
+                  cityOrFallback.label
+                )}&gross=${safeSalary}`}
                 className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:scale-[1.01] transition"
               >
                 Open this scenario in the Real Cost Simulator →
@@ -300,19 +268,19 @@ export default function Page({ params }: { params: Params }) {
                 {neighbours.map((s) => (
                   <a
                     key={s}
-                    href={`/enough/uk/${city.slug}/${s}`}
+                    href={`/enough/uk/${cityOrFallback.slug}/${s}`}
                     className="px-3 py-1.5 rounded-full border border-zinc-200 bg-white/80 hover:border-rose-400 hover:text-rose-700 transition"
                   >
-                    {`Is £${s.toLocaleString()} enough in ${city.label}?`}
+                    {`Is £${s.toLocaleString()} enough in ${cityOrFallback.label}?`}
                   </a>
                 ))}
-                {UK_CITIES.filter((c) => c.slug !== city.slug)
+                {UK_CITIES.filter((c) => c.slug !== cityOrFallback.slug)
                   .slice(0, 3)
                   .map((c) => (
                     <a
                       key={c.slug}
-                      href={`/enough/uk/${c.slug}/${salaryYear}`}
-                      className="px-3 py-1.5 rounded-full border border-zinc-200 bg-white/80 hover:border-sky-400 hover:text-sky-700 transition"
+                      href={`/enough/uk/${c.slug}/${safeSalary}`}
+                      className="px-3 py-1.5 rounded-full border border-zinc-200 bg.white/80 hover:border-sky-400 hover:text-sky-700 transition"
                     >
                       {`Same salary in ${c.label}`}
                     </a>
@@ -326,7 +294,7 @@ export default function Page({ params }: { params: Params }) {
   );
 }
 
-// ----- tiny presentational helpers -----
+// helpers
 function Stat({
   label,
   value,
