@@ -1,41 +1,52 @@
-import type { Metadata } from "next";
-import {
-  UK_CITIES,
-  approximateNetFromGrossUK,
-} from "../cityConfig";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useSearchParams } from "next/navigation";
+import { UK_CITIES, approximateNetFromGrossUK } from "../cityConfig";
 
-type SearchParams = {
+type CityConfig = (typeof UK_CITIES)[number];
+
+type SearchParamsShape = {
   country?: string;
   city?: string;
   salary?: string;
 };
 
-export const metadata: Metadata = {
-  title: "Is this salary enough?",
-  description:
-    "Check if your salary is enough after rent, commute and the real cost of working.",
-};
+function getCity(slug?: string | null): CityConfig | null {
+  if (!slug) return null;
+  const s = slug.toLowerCase();
+  return UK_CITIES.find((c) => c.slug.toLowerCase() === s) ?? null;
+}
 
-// helper: find city by slug
-const getCity = (slug?: string) =>
-  UK_CITIES.find(
-    (c) => c.slug.toLowerCase() === (slug || "").toLowerCase()
-  );
+function classifyLeftoverRatio(ratio: number) {
+  if (ratio < 0.05)
+    return {
+      label: "Extremely tight / probably not sustainable",
+      tone: "bad" as const,
+    };
+  if (ratio < 0.15)
+    return { label: "Tight – manageable but fragile", tone: "ok" as const };
+  if (ratio < 0.3)
+    return { label: "Reasonable, but you’ll feel it", tone: "ok" as const };
+  return { label: "Comfortable (on paper)", tone: "good" as const };
+}
 
-export default function EnoughPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  // read from query string
+export default function EnoughPage() {
+  const sp = useSearchParams();
+
+  const searchParams: SearchParamsShape = {
+    country: sp.get("country") ?? undefined,
+    city: sp.get("city") ?? undefined,
+    salary: sp.get("salary") ?? undefined,
+  };
+
   const country = (searchParams.country || "uk").toLowerCase();
   const citySlug = searchParams.city;
   const salaryYear = Number(searchParams.salary || "0");
 
-  const city =
-    getCity(citySlug) ??
+  const matchedCity = getCity(citySlug);
+
+  const city: CityConfig =
+    matchedCity ??
     ({
       slug: "unknown",
       label: "this city",
@@ -45,7 +56,7 @@ export default function EnoughPage({
       typicalBills: 150,
       typicalCommuteCost: 120,
       typicalCommuteMins: 60,
-    } as (typeof UK_CITIES)[number]);
+    } as CityConfig);
 
   const netMonthly = approximateNetFromGrossUK(salaryYear || 0);
   const housing = city.typicalRentSingle;
@@ -70,19 +81,20 @@ export default function EnoughPage({
     ? `£${salaryYear.toLocaleString()}`
     : "£0";
 
-  // simple verdict
-  let verdict = "Extremely tight / probably not sustainable";
   const ratio = netMonthly > 0 ? leftover / netMonthly : -1;
-  if (ratio >= 0.3) verdict = "Comfortable (on paper)";
-  else if (ratio >= 0.15) verdict = "Reasonable, but you’ll feel it";
-  else if (ratio >= 0.05) verdict = "Tight – manageable but fragile";
+  const verdict = classifyLeftoverRatio(ratio);
+
+  // neighbours for "nearby scenarios"
+  const neighbours = [22000, 25000, 28000, 30000, 32000, 35000, 40000].filter(
+    (s) => Math.abs(s - salaryYear) <= 10000 && s !== salaryYear
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-rose-50 via-sky-50 to-amber-50">
       <section className="py-10 md:py-16">
         <div className="max-w-3xl mx-auto px-4">
           <div className="bg-white/90 backdrop-blur border border-white/80 rounded-3xl shadow-xl p-6 md:p-8 space-y-6">
-            {/* tiny debug – you can delete later */}
+            {/* DEBUG – you can delete this once you're happy */}
             <div className="text-[11px] text-zinc-500 mb-2">
               searchParams: {JSON.stringify(searchParams)}
             </div>
@@ -96,9 +108,17 @@ export default function EnoughPage({
                 commute and the real cost of staying employable in{" "}
                 {city.label}.
               </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                  verdict.tone === "bad"
+                    ? "bg-rose-100 text-rose-800"
+                    : verdict.tone === "ok"
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-emerald-100 text-emerald-800"
+                }`}
+              >
                 <span>Verdict:</span>
-                <span>{verdict}</span>
+                <span>{verdict.label}</span>
               </div>
             </header>
 
@@ -122,6 +142,23 @@ export default function EnoughPage({
                 }
               />
             </div>
+
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-zinc-900">
+                Explore nearby scenarios
+              </h3>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {neighbours.map((s) => (
+                  <a
+                    key={s}
+                    href={`/enough?country=${country}&city=${city.slug}&salary=${s}`}
+                    className="px-3 py-1.5 rounded-full border border-zinc-200 bg-white/80 hover:border-rose-400 hover:text-rose-700 transition"
+                  >
+                    {`Is £${s.toLocaleString()} enough in ${city.label}?`}
+                  </a>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       </section>
