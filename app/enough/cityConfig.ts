@@ -1,4 +1,3 @@
-
 // app/enough/cityConfig.ts
 
 export type CountryCode = "uk";
@@ -17,12 +16,15 @@ export interface CityConfig {
   label: string;
   country: CountryCode;
   currency: string;
-  typicalRentSingle: number;   // monthly, one-bed or decent room
-  typicalBills: number;        // energy + council tax share
-  typicalCommuteCost: number;  // monthly
-  typicalCommuteMins: number;  // there & back per workday
+  typicalRentSingle: number;   // monthly rent for solo renter
+  typicalBills: number;        // bills + council tax share
+  typicalCommuteCost: number;  // monthly travel
+  typicalCommuteMins: number;  // there & back per working day
 }
 
+// *** IMPORTANT ***
+// slug MUST be lowercase and match the URL segment exactly
+// e.g. /enough/uk/london/... uses slug: "london"
 export const UK_CITIES: CityConfig[] = [
   {
     slug: "london",
@@ -44,7 +46,7 @@ export const UK_CITIES: CityConfig[] = [
     typicalCommuteCost: 120,
     typicalCommuteMins: 50,
   },
-    {
+  {
     slug: "birmingham",
     label: "Birmingham",
     country: "uk",
@@ -96,6 +98,7 @@ export const UK_CITIES: CityConfig[] = [
   },
 ];
 
+// salary bands we generate pages for
 export const UK_SALARY_BANDS: number[] = [
   22000,
   25000,
@@ -110,7 +113,7 @@ export const UK_SALARY_BANDS: number[] = [
   70000,
 ];
 
-// very rough net pay factor for UK – you can improve this later
+// VERY rough UK net ≈ monthly
 export function approximateNetFromGrossUK(grossYear: number): number {
   const effectiveRate =
     grossYear <= 30000 ? 0.78 : grossYear <= 50000 ? 0.75 : 0.70;
