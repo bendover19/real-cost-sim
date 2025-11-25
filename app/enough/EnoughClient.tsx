@@ -64,20 +64,6 @@ export default function EnoughClient() {
 
   return (
     <section className="w-full max-w-3xl">
-      {/* Debug: what we actually read from the URL */}
-      <pre className="mb-4 rounded-lg bg-zinc-900 text-zinc-100 text-[11px] p-3 leading-snug">
-        {JSON.stringify(
-          {
-            readFromUrl: {
-              country,
-              citySlug,
-              rawSalary,
-            },
-          },
-          null,
-          2
-        )}
-      </pre>
 
       <div className="rounded-3xl bg-white/90 shadow-xl border border-zinc-100 px-6 py-7 md:px-9 md:py-8">
         <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-400 mb-3">
