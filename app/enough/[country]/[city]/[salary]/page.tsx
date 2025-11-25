@@ -1,8 +1,9 @@
 // app/enough/[country]/[city]/[salary]/page.tsx
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import EnoughClient from "../../EnoughClient";
-import { UK_CITIES, UK_SALARY_BANDS } from "../../cityConfig";
+
+import EnoughClient from "../../../EnoughClient";
+import { UK_CITIES, UK_SALARY_BANDS } from "../../../../cityConfig";
 
 type Params = {
   country: string;
@@ -38,20 +39,17 @@ export function generateMetadata(
     : "this salary";
 
   const title = `Is ${salaryPretty} enough to live in ${cityLabel}?`;
-  const description = `Rough estimate of whether a salary of ${salaryPretty} is enough to live in ${cityLabel} in the UK, after typical rent, bills and commute costs.`;
+  const description = `Rough estimate of whether ${salaryPretty} is enough to live in ${cityLabel}, after typical rent, bills and commute.`;
 
   const url = `https://www.real-cost-sim.com/enough/uk/${city}/${salary}`;
 
   return {
     title,
     description,
-    alternates: {
-      canonical: url,
-    },
+    alternates: { canonical: url },
   };
 }
 
-// --- Page that actually renders the client calculator ---
 export default function EnoughPrettyPage() {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
