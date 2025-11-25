@@ -1,11 +1,13 @@
 // app/sitemap.ts
 import type { MetadataRoute } from "next";
+import { UK_CITIES, UK_SALARY_BANDS } from "./cityConfig";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://real-cost-sim.com";
+  // Pick one canonical base and stick with it
+  const base = "https://www.real-cost-sim.com";
   const now = new Date();
 
-  return [
+  const staticUrls: MetadataRoute.Sitemap = [
     // Core
     {
       url: `${base}/`,
@@ -37,4 +39,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Legal
     { url: `${base}/privacy`, lastModified: now, priority: 0.2 },
   ];
+
+  // === Programmatic "Is this salary enough in CITY?" pages ===
+  const enoughUrls: MetadataRoute.Sitemap = UK_CITIES.flatMap((city) =>
+    UK_SALARY_BANDS.map((salary) => ({
+      url: `${base}/enough/uk/${city.slug}/${salary}`,
+      lastModified: now,
+      // Slightly lower than core tools, but still decent
+      priority: 0.7,
+    }))
+  );
+
+  return [...staticUrls, ...enoughUrls];
 }
