@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { UK_CITIES, approximateNetFromGrossUK } from "../cityConfig";
 
 type CityConfig = (typeof UK_CITIES)[number];
@@ -28,10 +28,29 @@ function formatGBP(value: number): string {
 
 export default function EnoughClient() {
   const searchParams = useSearchParams();
+const pathname = usePathname();
 
-  const country = (searchParams.get("country") ?? "uk").toLowerCase();
-  const citySlug = (searchParams.get("city") ?? "").toLowerCase();
-  const rawSalary = searchParams.get("salary");
+// Start with query params (works for /enough?country=uk&city=manchester&salary=28000)
+let country = (searchParams.get("country") ?? "").toLowerCase();
+let citySlug = (searchParams.get("city") ?? "").toLowerCase();
+let rawSalary = searchParams.get("salary");
+
+// Fallback: try to read from path /enough/uk/manchester/28000
+if ((!country || !citySlug || !rawSalary) && pathname) {
+  const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","manchester","28000"]
+  const idx = segments.indexOf("enough");
+  const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","manchester","28000"]
+
+  if (after.length >= 3) {
+    if (!country) country = after[0].toLowerCase();
+    if (!citySlug) citySlug = after[1].toLowerCase();
+    if (!rawSalary) rawSalary = after[2];
+  }
+}
+
+// Default country if still missing
+if (!country) country = "uk";
+
 
   const city = getCityConfig(citySlug);
   const salary = parseSalary(rawSalary);
