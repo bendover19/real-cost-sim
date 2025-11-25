@@ -28,29 +28,28 @@ function formatGBP(value: number): string {
 
 export default function EnoughClient() {
   const searchParams = useSearchParams();
-const pathname = usePathname();
+  const pathname = usePathname();
 
-// Start with query params (works for /enough?country=uk&city=manchester&salary=28000)
-let country = (searchParams.get("country") ?? "").toLowerCase();
-let citySlug = (searchParams.get("city") ?? "").toLowerCase();
-let rawSalary = searchParams.get("salary");
+  // Start with query params (works for /enough?country=uk&city=manchester&salary=28000)
+  let country = (searchParams.get("country") ?? "").toLowerCase();
+  let citySlug = (searchParams.get("city") ?? "").toLowerCase();
+  let rawSalary = searchParams.get("salary");
 
-// Fallback: try to read from path /enough/uk/manchester/28000
-if ((!country || !citySlug || !rawSalary) && pathname) {
-  const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","manchester","28000"]
-  const idx = segments.indexOf("enough");
-  const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","manchester","28000"]
+  // Fallback: try to read from path /enough/uk/manchester/28000
+  if ((!country || !citySlug || !rawSalary) && pathname) {
+    const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","manchester","28000"]
+    const idx = segments.indexOf("enough");
+    const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","manchester","28000"]
 
-  if (after.length >= 3) {
-    if (!country) country = after[0].toLowerCase();
-    if (!citySlug) citySlug = after[1].toLowerCase();
-    if (!rawSalary) rawSalary = after[2];
+    if (after.length >= 3) {
+      if (!country) country = after[0].toLowerCase();
+      if (!citySlug) citySlug = after[1].toLowerCase();
+      if (!rawSalary) rawSalary = after[2];
+    }
   }
-}
 
-// Default country if still missing
-if (!country) country = "uk";
-
+  // Default country if still missing
+  if (!country) country = "uk";
 
   const city = getCityConfig(citySlug);
   const salary = parseSalary(rawSalary);
@@ -81,9 +80,26 @@ if (!country) country = "uk";
 
   const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual || ""}`;
 
+  // ---------- Internal linking helpers (SEO + UX) ----------
+
+  // Nearby salaries: +/- £2k from current, only if we have a valid salary
+  const nearbySalaries =
+    grossAnnual > 0
+      ? [grossAnnual - 2000, grossAnnual + 2000].filter((n) => n > 0)
+      : [];
+
+  // Some “anchor” cities to cross-link to; you can tweak this list
+  const anchorCitySlugs = ["london", "manchester", "birmingham", "bristol", "edinburgh"];
+
+  const otherCities = anchorCitySlugs
+    .filter((slug) => slug !== citySlug)
+    .slice(0, 4); // keep it small and tidy
+
+  // Fallback salary to use in those links if none in URL
+  const fallbackSalary = grossAnnual || 28000;
+
   return (
     <section className="w-full max-w-3xl">
-
       <div className="rounded-3xl bg-white/90 shadow-xl border border-zinc-100 px-6 py-7 md:px-9 md:py-8">
         <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-400 mb-3">
           {countryLabel} · {cityLabel}
@@ -137,7 +153,11 @@ if (!country) country = "uk";
             <p
               className={
                 "font-semibold " +
-                (leftover < 0 ? "text-rose-600" : leftover < 400 ? "text-amber-600" : "text-emerald-600")
+                (leftover < 0
+                  ? "text-rose-600"
+                  : leftover < 400
+                  ? "text-amber-600"
+                  : "text-emerald-600")
               }
             >
               {formatGBP(leftover)}
@@ -195,6 +215,47 @@ if (!country) country = "uk";
         >
           Open this scenario in the Real Cost Simulator →
         </a>
+
+        {/* Internal links: nearby salaries + other cities */}
+        <div className="mt-8 space-y-5 text-sm text-zinc-700">
+          {nearbySalaries.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">
+                Check nearby salaries in {cityLabel}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {nearbySalaries.map((s) => (
+                  <a
+                    key={s}
+                    href={`/enough/${country}/${citySlug || "london"}/${s}`}
+                    className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
+                  >
+                    {`Is £${s.toLocaleString("en-GB")} enough in ${cityLabel}?`}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h3 className="font-semibold mb-2">Compare with other cities</h3>
+            <div className="flex flex-wrap gap-2">
+              {otherCities.map((slug) => {
+                const conf = UK_CITIES.find((c) => c.slug === slug);
+                const label = conf?.label ?? slug.charAt(0).toUpperCase() + slug.slice(1);
+                return (
+                  <a
+                    key={slug}
+                    href={`/enough/${country}/${slug}/${fallbackSalary}`}
+                    className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
+                  >
+                    {`Same salary in ${label}`}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
