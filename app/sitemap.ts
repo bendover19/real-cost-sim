@@ -1,69 +1,52 @@
-// app/enough/[country]/[city]/[salary]/page.tsx
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import EnoughClient from "../../../EnoughClient";
-import { UK_CITIES, UK_SALARY_BANDS } from "../../../cityConfig";
+// app/sitemap.ts
+import type { MetadataRoute } from "next";
+import { UK_CITIES, UK_SALARY_BANDS } from "./cityConfig";
 
-type Params = {
-  country: string;
-  city: string;
-  salary: string;
-};
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base = "https://www.real-cost-sim.com";
+  const now = new Date();
 
-// --- Tell Next which static pages to build (pSEO core) ---
-export function generateStaticParams() {
-  const country = "uk";
+  const staticUrls: MetadataRoute.Sitemap = [
+    // Core
+    {
+      url: `${base}/`,
+      lastModified: now,
+      priority: 1.0,
+    },
+    {
+      url: `${base}/sim`,
+      lastModified: now,
+      priority: 0.9,
+    },
 
-  return UK_CITIES.flatMap((city) =>
+    // === Calculator / landing pages (current folder names) ===
+    { url: `${base}/real-hourly-wage-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/commute-cost-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/cost-of-working-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/move-city-cost-of-living-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/part-time-vs-full-time-hourly-pay`, lastModified: now, priority: 0.8 },
+    { url: `${base}/remote-vs-office-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/remote-work-savings-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/two-jobs-burnout-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/uk-cost-of-working-calculator`, lastModified: now, priority: 0.8 },
+    { url: `${base}/us-cost-of-working-calculator`, lastModified: now, priority: 0.8 },
+
+    // Content / side pages (lower priority)
+    { url: `${base}/reddit`, lastModified: now, priority: 0.4 },
+    { url: `${base}/tiktok`, lastModified: now, priority: 0.4 },
+
+    // Legal
+    { url: `${base}/privacy`, lastModified: now, priority: 0.2 },
+  ];
+
+  // === Programmatic "Is this salary enough in CITY?" pages ===
+  const enoughUrls: MetadataRoute.Sitemap = UK_CITIES.flatMap((city) =>
     UK_SALARY_BANDS.map((salary) => ({
-      country,
-      city: city.slug,
-      salary: String(salary),
+      url: `${base}/enough/uk/${city.slug}/${salary}`,
+      lastModified: now,
+      priority: 0.7,
     }))
   );
-}
 
-// --- Per-page <title> and <meta> using city + salary ---
-export function generateMetadata(
-  { params }: { params: Params }
-): Metadata {
-  const { city, salary } = params;
-
-  const cityConfig = UK_CITIES.find((c) => c.slug === city);
-  const cityLabel = cityConfig?.label ?? city;
-  const salaryNumber = Number(salary);
-
-  const salaryPretty = Number.isFinite(salaryNumber)
-    ? `£${salaryNumber.toLocaleString("en-GB")}`
-    : "this salary";
-
-  const title = `Is ${salaryPretty} enough to live in ${cityLabel}?`;
-  const description = `Rough estimate of whether a salary of ${salaryPretty} is enough to live in ${cityLabel} in the UK, after typical rent, bills and commute costs.`;
-
-  const url = `https://www.real-cost-sim.com/enough/uk/${city}/${salary}`;
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: url,
-    },
-  };
-}
-
-// --- Page that actually renders the client calculator ---
-export default function EnoughPrettyPage() {
-  return (
-    <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
-      <Suspense
-        fallback={
-          <div className="mt-16 text-sm text-zinc-500">
-            Loading the calculator…
-          </div>
-        }
-      >
-        <EnoughClient />
-      </Suspense>
-    </main>
-  );
+  return [...staticUrls, ...enoughUrls];
 }
