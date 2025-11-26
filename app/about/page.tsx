@@ -26,7 +26,7 @@ export default function AboutPage() {
 
           <p>
             <strong>Real Cost Sim was created to answer a simple question many people struggle with:</strong><br />
-            “Is my salary actually giving me a good life — or am I treading water?”
+            “Is my salary actually giving me a good life-or am I treading water?”
           </p>
 
           <p>
@@ -47,7 +47,7 @@ export default function AboutPage() {
               NickSimulator
             </a>
             , which went viral for exposing how much of people’s income is consumed by modern life
-            overheads, showed that people are looking for deeper, more transparent numbers — not
+            overheads, showed that people are looking for deeper, more transparent numbers, not
             surface-level salary calculators.
           </p>
 
@@ -67,7 +67,7 @@ export default function AboutPage() {
 
           <p>
             …into one simple model that shows what your work <strong>truly</strong> buys you.
-            It isn’t financial advice — it’s a clarity tool.
+            It isn’t financial advice; it’s a clarity tool.
           </p>
 
           <p>The goal is to help people answer questions like:</p>
@@ -97,7 +97,7 @@ export default function AboutPage() {
           </ul>
 
           <p>
-            It’s a lens — a framework — to reveal the hidden forces that shape your working life.
+            It’s a lens, a framework, to reveal the hidden forces that shape your working life.
             If it helps even a few people realise they could live better elsewhere, negotiate differently,
             or reclaim some time, then it has done its job.
           </p>
