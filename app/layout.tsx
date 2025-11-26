@@ -118,14 +118,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <main className="flex-grow">{children}</main>
 
-        <footer className="text-center text-sm text-zinc-500 py-8 border-t border-zinc-800">
-          <p>
-            © {new Date().getFullYear()} Real Cost Simulator —{" "}
-            <a href="/privacy" className="underline hover:text-zinc-300">
-              Privacy &amp; Cookies Policy
-            </a>
-          </p>
-        </footer>
+        <footer className="mt-20 mb-10 text-center text-[13px] text-zinc-500">
+  <p>© {new Date().getFullYear()} Real Cost Simulator</p>
+
+  <div className="mt-2 flex justify-center gap-4">
+    <a
+      href="/about"
+      className="hover:text-zinc-700 transition"
+    >
+      About
+    </a>
+
+    <a
+      href="/contact"
+      className="hover:text-zinc-700 transition"
+    >
+      Contact
+    </a>
+
+    <a
+      href="/privacy"
+      className="hover:text-zinc-700 transition"
+    >
+      Privacy & Cookies
+    </a>
+  </div>
+</footer>
+
 
         <Analytics />
       </body>
