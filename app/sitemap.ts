@@ -1,6 +1,6 @@
 // app/sitemap.ts
 import type { MetadataRoute } from "next";
-import { UK_CITIES, UK_SALARY_BANDS } from "./cityConfig";
+import { UK_CITIES } from "./cityConfig";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://www.real-cost-sim.com";
@@ -17,6 +17,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${base}/sim`,
       lastModified: now,
       priority: 0.9,
+    },
+    {
+      url: `${base}/enough`,
+      lastModified: now,
+      priority: 0.8,
     },
 
     // === Calculator / landing pages (current folder names) ===
@@ -40,13 +45,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   // === Programmatic "Is this salary enough in CITY?" pages ===
-  const enoughUrls: MetadataRoute.Sitemap = UK_CITIES.flatMap((city) =>
-    UK_SALARY_BANDS.map((salary) => ({
-      url: `${base}/enough/uk/${city.slug}/${salary}`,
-      lastModified: now,
-      priority: 0.7,
-    }))
-  );
+  // One URL per city (no salary in the path)
+  const enoughCityUrls: MetadataRoute.Sitemap = UK_CITIES.map((city) => ({
+    url: `${base}/enough/uk/${city.slug}`,
+    lastModified: now,
+    priority: 0.7,
+  }));
 
-  return [...staticUrls, ...enoughUrls];
+  return [...staticUrls, ...enoughCityUrls];
 }
