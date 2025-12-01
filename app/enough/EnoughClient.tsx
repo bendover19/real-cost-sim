@@ -1,9 +1,11 @@
 "use client";
 
 import { useSearchParams, usePathname } from "next/navigation";
-import { UK_CITIES, approximateNetFromGrossUK } from "../cityConfig";
-import { generateCityDescription } from "../cityConfig";
-
+import {
+  UK_CITIES,
+  approximateNetFromGrossUK,
+  generateCityDescription,
+} from "../cityConfig";
 
 type CityConfig = (typeof UK_CITIES)[number];
 
@@ -122,6 +124,13 @@ export default function EnoughClient() {
           for a single renter in {cityLabel}. For proper planning, plug your own
           numbers into the full Real Cost Simulator.
         </p>
+
+        {/* City-specific descriptive text for SEO / AdSense */}
+        {city && (
+          <p className="text-[14px] md:text-[15px] text-zinc-700 leading-relaxed mb-6 whitespace-pre-line">
+            {generateCityDescription(city)}
+          </p>
+        )}
 
         <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 border border-rose-100 px-3 py-1 text-[11px] font-medium text-rose-600 mb-6">
           <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
