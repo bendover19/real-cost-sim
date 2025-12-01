@@ -30,21 +30,22 @@ export default function EnoughClient() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // Start with query params (works for /enough?country=uk&city=manchester&salary=28000)
+  // 1) Prefer query params: /enough/uk/london?salary=28000
   let country = (searchParams.get("country") ?? "").toLowerCase();
   let citySlug = (searchParams.get("city") ?? "").toLowerCase();
   let rawSalary = searchParams.get("salary");
 
-  // Fallback: try to read from path /enough/uk/manchester/28000
-  if ((!country || !citySlug || !rawSalary) && pathname) {
-    const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","manchester","28000"]
+  // 2) Fallback: read country + city from path /enough/uk/london
+  //    (we intentionally do NOT read salary from the path for SEO)
+  if ((!country || !citySlug) && pathname) {
+    const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","london"]
     const idx = segments.indexOf("enough");
-    const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","manchester","28000"]
+    const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","london"]
 
-    if (after.length >= 3) {
+    if (after.length >= 2) {
       if (!country) country = after[0].toLowerCase();
       if (!citySlug) citySlug = after[1].toLowerCase();
-      if (!rawSalary) rawSalary = after[2];
+      // do NOT set rawSalary here – keep it query-param only
     }
   }
 
@@ -78,6 +79,7 @@ export default function EnoughClient() {
       ? "Tight but possible"
       : "Extremely tight / probably not sustainable";
 
+  const baseCityUrl = `/enough/${country}/${citySlug || "london"}`;
   const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual || ""}`;
 
   // ---------- Internal linking helpers (SEO + UX) ----------
@@ -227,7 +229,7 @@ export default function EnoughClient() {
                 {nearbySalaries.map((s) => (
                   <a
                     key={s}
-                    href={`/enough/${country}/${citySlug || "london"}/${s}`}
+                    href={`${baseCityUrl}?salary=${s}`}
                     className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
                   >
                     {`Is £${s.toLocaleString("en-GB")} enough in ${cityLabel}?`}
@@ -242,11 +244,13 @@ export default function EnoughClient() {
             <div className="flex flex-wrap gap-2">
               {otherCities.map((slug) => {
                 const conf = UK_CITIES.find((c) => c.slug === slug);
-                const label = conf?.label ?? slug.charAt(0).toUpperCase() + slug.slice(1);
+                const label =
+                  conf?.label ?? slug.charAt(0).toUpperCase() + slug.slice(1);
+                const href = `/enough/${country}/${slug}?salary=${fallbackSalary}`;
                 return (
                   <a
                     key={slug}
-                    href={`/enough/${country}/${slug}/${fallbackSalary}`}
+                    href={href}
                     className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
                   >
                     {`Same salary in ${label}`}
