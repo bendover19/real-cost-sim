@@ -1,7 +1,7 @@
 // app/enough/[country]/[city]/page.tsx
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import EnoughClient from "../../../EnoughClient";
+import EnoughClient from "../../EnoughClient";
 
 type Props = {
   params: { country: string; city: string };
