@@ -2,6 +2,8 @@
 
 import { useSearchParams, usePathname } from "next/navigation";
 import { UK_CITIES, approximateNetFromGrossUK } from "../cityConfig";
+import { generateCityDescription } from "../cityConfig";
+
 
 type CityConfig = (typeof UK_CITIES)[number];
 
