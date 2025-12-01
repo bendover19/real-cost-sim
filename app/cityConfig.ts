@@ -352,6 +352,22 @@ export const UK_CITIES: CityConfig[] = [
   },
 ];
 
+export function generateCityDescription(city: CityConfig): string {
+  return `
+${city.label} has a typical monthly rent of around £${city.typicalRentSingle}, 
+with average bills of about £${city.typicalBills}. Combined with commute 
+costs of roughly £${city.typicalCommuteCost} per month and a daily commute 
+time of about ${city.typicalCommuteMins} minutes, ${city.label} tends to be 
+${city.typicalRentSingle > 1000 ? "one of the pricier" : "a relatively affordable"} 
+UK cities for single renters. 
+
+Your take-home pay determines whether you’ll have breathing room or a tight month. 
+Below you’ll find a breakdown showing how far a given salary stretches in ${city.label}, 
+plus an option to test your exact situation in the full Real Cost Simulator.
+  `.trim();
+}
+
+
 export const UK_SALARY_BANDS: number[] = [
   18000, 20000, 22000, 24000, 26000, 28000, 30000, 32000, 34000, 36000,
   38000, 40000, 42000, 44000, 46000, 48000, 50000, 52000, 54000, 56000,
