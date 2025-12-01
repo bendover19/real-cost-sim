@@ -7,14 +7,15 @@ import { useEffect, useRef, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/sim", label: "Start Simulator" },
-  { href: "/real-hourly-wage-calculator", label: "Real Hourly Wage Calculator" },
-  { href: "/commute-cost-calculator", label: "True Cost of Commuting" },
-  { href: "/remote-vs-office-calculator", label: "Remote vs Office Pay Calculator" },
-  { href: "/move-city-cost-of-living-calculator", label: "Cost of Moving City" },
-  { href: "/uk-cost-of-working-calculator", label: "UK–EU–US Salary Comparison" },
-  { href: "/part-time-vs-full-time-hourly-pay", label: "Part-time vs Full-time hourly pay" },
-  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/sim", label: "Start simulator" },
+  { href: "/enough", label: "City salaries" }, // new: index for /enough/uk/city pages
+  { href: "/real-hourly-wage-calculator", label: "Real hourly wage" },
+  { href: "/commute-cost-calculator", label: "Commute cost" },
+  { href: "/remote-vs-office-calculator", label: "Remote vs office" },
+  { href: "/move-city-cost-of-living-calculator", label: "Move city" },
+  { href: "/uk-cost-of-working-calculator", label: "UK–EU–US pay" },
+  { href: "/part-time-vs-full-time-hourly-pay", label: "Part-time vs full-time" },
+  // Privacy & Cookies is already in the footer on every page, so no need to repeat it here
 ];
 
 export default function Header() {
@@ -60,18 +61,17 @@ export default function Header() {
     <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-end px-4 pt-3 sm:px-6">
       {/* Tiny transparent area so the button is clickable but header itself doesn't block the UI */}
       <div className="pointer-events-auto">
-        {/* Hamburger button, no text, minimal Apple-y */}
+        {/* Hamburger button */}
         <button
           ref={buttonRef}
           type="button"
-          aria-label="Open navigation"
+          aria-label="Toggle navigation"
           onClick={() => setOpen((v) => !v)}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-300/70 
                      bg-white/40 backdrop-blur-sm shadow-sm hover:bg-white/70 
                      transition focus-visible:outline-none focus-visible:ring-2 
                      focus-visible:ring-zinc-800"
         >
-          <span className="sr-only">Toggle navigation</span>
           <span className="flex flex-col gap-[3px]">
             <span className="block h-[1.5px] w-4 rounded-full bg-zinc-900" />
             <span className="block h-[1.5px] w-4 rounded-full bg-zinc-900" />
