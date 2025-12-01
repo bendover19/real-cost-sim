@@ -4,15 +4,26 @@ import { Suspense } from "react";
 import EnoughClient from "../../EnoughClient";
 
 type Props = {
-  params: { country: string; city: string };
+  params?: {
+    country?: string;
+    city?: string;
+  };
 };
 
 export function generateMetadata({ params }: Props): Metadata {
-  const country = params.country.toLowerCase();
-  const city = params.city.toLowerCase();
+  const rawCountry = params?.country ?? "uk";
+  const rawCity = params?.city ?? "london";
+
+  const country =
+    typeof rawCountry === "string" ? rawCountry.toLowerCase() : "uk";
+  const city = typeof rawCity === "string" ? rawCity.toLowerCase() : "london";
 
   const prettyCity = city.charAt(0).toUpperCase() + city.slice(1);
-  const canonical = `https://www.real-cost-sim.com/enough/${country}/${city}`;
+
+  // If you like, you can use an env var here instead of hard-coding
+  const canonicalBase =
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.real-cost-sim.com";
+  const canonical = `${canonicalBase}/enough/${country}/${city}`;
 
   return {
     title: `Is this salary enough to live in ${prettyCity}? | Real Cost Sim`,
