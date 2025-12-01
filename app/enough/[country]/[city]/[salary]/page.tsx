@@ -1,56 +1,29 @@
-// app/enough/[country]/[city]/[salary]/page.tsx
+// app/enough/[country]/[city]/page.tsx
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import EnoughClient from "../../EnoughClient";
 
-import EnoughClient from "../../../EnoughClient";
-import { UK_CITIES, UK_SALARY_BANDS } from "../../../../cityConfig";
-
-type Params = {
-  country: string;
-  city: string;
-  salary: string;
+type Props = {
+  params: { country: string; city: string };
 };
 
-// --- Tell Next which static pages to build (pSEO core) ---
-export function generateStaticParams() {
-  const country = "uk";
+export function generateMetadata({ params }: Props): Metadata {
+  const country = params.country.toLowerCase();
+  const city = params.city.toLowerCase();
 
-  return UK_CITIES.flatMap((city) =>
-    UK_SALARY_BANDS.map((salary) => ({
-      country,
-      city: city.slug,
-      salary: String(salary),
-    }))
-  );
-}
-
-// --- Per-page <title> and <meta> using city + salary ---
-export function generateMetadata(
-  { params }: { params: Params }
-): Metadata {
-  const { city, salary } = params;
-
-  const cityConfig = UK_CITIES.find((c) => c.slug === city);
-  const cityLabel = cityConfig?.label ?? city;
-  const salaryNumber = Number(salary);
-
-  const salaryPretty = Number.isFinite(salaryNumber)
-    ? `£${salaryNumber.toLocaleString("en-GB")}`
-    : "this salary";
-
-  const title = `Is ${salaryPretty} enough to live in ${cityLabel}?`;
-  const description = `Rough estimate of whether ${salaryPretty} is enough to live in ${cityLabel}, after typical rent, bills and commute.`;
-
-  const url = `https://www.real-cost-sim.com/enough/uk/${city}/${salary}`;
+  const prettyCity = city.charAt(0).toUpperCase() + city.slice(1);
+  const canonical = `https://www.real-cost-sim.com/enough/${country}/${city}`;
 
   return {
-    title,
-    description,
-    alternates: { canonical: url },
+    title: `Is this salary enough to live in ${prettyCity}? | Real Cost Sim`,
+    description: `Rough estimate of what's left after rent, bills and commute for a single renter in ${prettyCity}. Check if your salary is enough for ${prettyCity} using the Real Cost Sim.`,
+    alternates: {
+      canonical,
+    },
   };
 }
 
-export default function EnoughPrettyPage() {
+export default function EnoughCityPage() {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
       <Suspense
