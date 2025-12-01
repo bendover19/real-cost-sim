@@ -30,13 +30,12 @@ export default function EnoughClient() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // 1) Prefer query params: /enough/uk/london?salary=28000
+  // --- 1. Read from query string first: /enough?country=uk&city=london&salary=28000
   let country = (searchParams.get("country") ?? "").toLowerCase();
   let citySlug = (searchParams.get("city") ?? "").toLowerCase();
   let rawSalary = searchParams.get("salary");
 
-  // 2) Fallback: read country + city from path /enough/uk/london
-  //    (we intentionally do NOT read salary from the path for SEO)
+  // --- 2. Fallback: read country + city from path /enough/uk/london
   if ((!country || !citySlug) && pathname) {
     const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","london"]
     const idx = segments.indexOf("enough");
@@ -45,22 +44,25 @@ export default function EnoughClient() {
     if (after.length >= 2) {
       if (!country) country = after[0].toLowerCase();
       if (!citySlug) citySlug = after[1].toLowerCase();
-      // do NOT set rawSalary here – keep it query-param only
     }
   }
 
-  // Default country if still missing
+  // --- 3. Sensible defaults if still missing (for /enough)
   if (!country) country = "uk";
+  if (!citySlug) citySlug = "london";
 
   const city = getCityConfig(citySlug);
-  const salary = parseSalary(rawSalary);
+  const salaryFromQuery = parseSalary(rawSalary);
 
-  const cityLabel = city?.label ?? (citySlug || "this city");
+  // Default salary if none given anywhere
+  const grossAnnual = salaryFromQuery || 28000;
+
+  const cityLabel = city?.label ?? citySlug;
   const countryLabel = (city?.country ?? country).toUpperCase();
 
   // income
-  const grossAnnual = salary;
-  const netAnnual = grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
+  const netAnnual =
+    grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
   const netMonthly = netAnnual / 12;
 
   // costs (rough)
@@ -71,34 +73,34 @@ export default function EnoughClient() {
   const leftover = netMonthly - rent - bills - commute;
 
   const verdict =
-    !grossAnnual
-      ? "Salary missing in URL"
-      : leftover > 400
+    leftover > 400
       ? "Comfortable (roughly)"
       : leftover > 0
       ? "Tight but possible"
       : "Extremely tight / probably not sustainable";
 
-  const baseCityUrl = `/enough/${country}/${citySlug || "london"}`;
-  const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual || ""}`;
+  const baseCityUrl = `/enough/${country}/${citySlug}`;
+  const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual}`;
 
   // ---------- Internal linking helpers (SEO + UX) ----------
 
-  // Nearby salaries: +/- £2k from current, only if we have a valid salary
-  const nearbySalaries =
-    grossAnnual > 0
-      ? [grossAnnual - 2000, grossAnnual + 2000].filter((n) => n > 0)
-      : [];
+  // Nearby salaries: +/- £2k from current
+  const nearbySalaries = [grossAnnual - 2000, grossAnnual + 2000].filter(
+    (n) => n > 0
+  );
 
   // Some “anchor” cities to cross-link to; you can tweak this list
-  const anchorCitySlugs = ["london", "manchester", "birmingham", "bristol", "edinburgh"];
+  const anchorCitySlugs = [
+    "london",
+    "manchester",
+    "birmingham",
+    "bristol",
+    "edinburgh",
+  ];
 
   const otherCities = anchorCitySlugs
     .filter((slug) => slug !== citySlug)
-    .slice(0, 4); // keep it small and tidy
-
-  // Fallback salary to use in those links if none in URL
-  const fallbackSalary = grossAnnual || 28000;
+    .slice(0, 4);
 
   return (
     <section className="w-full max-w-3xl">
@@ -109,9 +111,7 @@ export default function EnoughClient() {
 
         <h1 className="text-3xl md:text-[2.2rem] font-semibold tracking-tight text-zinc-900 mb-3">
           Is{" "}
-          {grossAnnual
-            ? `£${grossAnnual.toLocaleString("en-GB")}`
-            : "this salary"}{" "}
+          {`£${grossAnnual.toLocaleString("en-GB")}`}{" "}
           enough to live in {cityLabel}?
         </h1>
 
@@ -133,7 +133,7 @@ export default function EnoughClient() {
               Gross salary
             </p>
             <p className="font-semibold text-zinc-900">
-              {grossAnnual ? formatGBP(grossAnnual) : "Unknown"}
+              {formatGBP(grossAnnual)}
               <span className="text-[11px] text-zinc-500"> / year</span>
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function EnoughClient() {
               Hour of freedom*
             </p>
             <p className="font-semibold text-zinc-900">
-              {grossAnnual ? (leftover > 0 ? "positive" : "negative") : "n/a"}
+              {leftover > 0 ? "positive" : "negative"}
             </p>
             <p className="text-[10px] text-zinc-400 mt-1">
               *very rough, based on leftovers vs. working hours
@@ -194,16 +194,8 @@ export default function EnoughClient() {
             <Row label="Net pay (after tax)" value={netMonthly} />
             <Row label="Rent" value={rent} />
             <Row label="Bills & council tax" value={bills} />
-            <Row
-              label="Commute costs"
-              value={commute}
-              note="~60–70 mins/day"
-            />
-            <Row
-              label="Estimated leftover"
-              value={leftover}
-              highlight
-            />
+            <Row label="Commute costs" value={commute} note="~60–70 mins/day" />
+            <Row label="Estimated leftover" value={leftover} highlight />
           </div>
         </div>
 
@@ -246,7 +238,7 @@ export default function EnoughClient() {
                 const conf = UK_CITIES.find((c) => c.slug === slug);
                 const label =
                   conf?.label ?? slug.charAt(0).toUpperCase() + slug.slice(1);
-                const href = `/enough/${country}/${slug}?salary=${fallbackSalary}`;
+                const href = `/enough/${country}/${slug}?salary=${grossAnnual}`;
                 return (
                   <a
                     key={slug}
