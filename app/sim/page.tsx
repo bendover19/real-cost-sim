@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 
 /* ============================================================
    Real Cost Simulator — page.tsx
-   - Sliders unchanged
+   - Sliders unchanged (plus new Food & groceries)
    - Text inputs are "sticky" (uncontrolled) so focus never jumps
    - Sections render once and are hidden/shown (no remounts)
    - Chart toggle for Typical local month vs Your month
@@ -70,7 +70,7 @@ const InputRange: React.FC<
 type RegionId = "UK" | "EU" | "US" | "OTHER";
 type Household = "solo" | "partner" | "partnerKids" | "singleParent" | "share" | "family";
 type DriverKey = "belonging" | "identity" | "timeTrade" | "comfort" | "connection" | "treats" | "moneyPressure";
-type SpendKey = "pet" | "therapy" | "supportOthers" | "health";
+type SpendKey = "food" | "pet" | "therapy" | "supportOthers" | "health";
 type Urbanicity = "inner" | "city" | "suburban" | "rural";
 type CommuteContext = "transitEfficient" | "mixed" | "carDependent";
 type ChildAge = "nursery" | "school";
@@ -138,8 +138,14 @@ const DRIVER_LIMITS: Record<DriverKey, { min: number; max: number; step: number 
   moneyPressure: { min: 0, max: 300, step: 5 },
 };
 
-// Slider limits for variable spends
+// Slider limits for variable spends (now includes Food)
 const SPEND_LIMITS: Record<SpendKey, { label: string; min: number; max: number; step: number }> = {
+  food: {
+    label: "🍽️ Food & groceries (including eating out, coffee, takeaways)",
+    min: 0,
+    max: 2000,
+    step: 10,
+  },
   pet: { label: "🐾 Pet costs (food, insurance, sitter/boarding, horse, etc.)", min: 0, max: 2000, step: 10 },
   therapy: { label: "🧠 Therapy / coaching / counselling", min: 0, max: 2000, step: 10 },
   supportOthers: { label: "🤝 Support others (family remit, gifts, obligations)", min: 0, max: 3000, step: 10 },
@@ -346,6 +352,7 @@ function BarChart({
   healthcare,
   debt,
   savings,
+  food,
 }: {
   currency: string;
   net: number;
@@ -356,10 +363,12 @@ function BarChart({
   healthcare: number;
   debt: number;
   savings: number;
+  food: number;
 }) {
   const safeNet = Math.max(1, net);
   const slices = [
     { label: "Housing", value: housing, color: "bg-rose-500" },
+    { label: "Food", value: food, color: "bg-amber-400" },
     { label: "Commute", value: commute, color: "bg-orange-500" },
     { label: "Dependents", value: dependents, color: "bg-indigo-500" },
     { label: "Healthcare", value: healthcare, color: "bg-red-500" },
@@ -367,7 +376,10 @@ function BarChart({
     { label: "Savings", value: savings, color: "bg-emerald-600" },
     { label: "Maintenance", value: maintenance, color: "bg-sky-500" },
   ];
-  const used = Math.min(housing + commute + dependents + healthcare + debt + savings + maintenance, safeNet);
+  const used = Math.min(
+    housing + food + commute + dependents + healthcare + debt + savings + maintenance,
+    safeNet
+  );
   const left = Math.max(0, safeNet - used);
   return (
     <div className="space-y-2">
@@ -766,26 +778,31 @@ export default function Page() {
   // NEW: Commute override
   const [commuteOverrideStr, setCommuteOverrideStr] = useState<string>("");
   const commuteOverride = useMemo(() => toNumberSafe(commuteOverrideStr), [commuteOverrideStr]);
-   // Remember the initial commute minutes so we can detect when the user changes it
+  // Remember the initial commute minutes so we can detect when the user changes it
   const initialCommuteMinsRef = React.useRef(commuteMinsPerDay);
 
-   // If the user customises commute time or cost, use *their* month in the chart
-useEffect(() => {
-  const hasCustomCommuteTime = commuteMinsPerDay !== initialCommuteMinsRef.current;
-  const hasCustomCommuteCost = commuteOverride > 0;
+  // If the user customises commute time or cost, use *their* month in the chart
+  useEffect(() => {
+    const hasCustomCommuteTime = commuteMinsPerDay !== initialCommuteMinsRef.current;
+    const hasCustomCommuteCost = commuteOverride > 0;
 
-  if (hasCustomCommuteTime || hasCustomCommuteCost) {
-    setChartUseBaseline(false);
-  }
-}, [commuteMinsPerDay, commuteOverride]);
-
+    if (hasCustomCommuteTime || hasCustomCommuteCost) {
+      setChartUseBaseline(false);
+    }
+  }, [commuteMinsPerDay, commuteOverride]);
 
   const [debtMonthly, setDebtMonthly] = useState<number>(150);
   const [studentLoan, setStudentLoan] = useState<number>(0);
 
   // Drivers & spends
   const [drivers, setDrivers] = useState<Record<DriverKey, number>>({ ...DRIVER_TYPICAL });
-  const [spends, setSpends] = useState<Record<SpendKey, number>>({ pet: 0, therapy: 0, supportOthers: 0, health: 0 });
+  const [spends, setSpends] = useState<Record<SpendKey, number>>({
+    food: 350,
+    pet: 0,
+    therapy: 0,
+    supportOthers: 0,
+    health: 0,
+  });
 
   // Healthcare (US)
   const [usHealthPlan, setUsHealthPlan] = useState<HealthPlanUS | null>(null);
@@ -806,9 +823,8 @@ useEffect(() => {
   const [simIncomeDelta, setSimIncomeDelta] = useState<number>(0);
 
   // --- Chart toggles ---
-const [chartUseBaseline, setChartUseBaseline] = useState<boolean>(false); // default: your month
-const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
-
+  const [chartUseBaseline, setChartUseBaseline] = useState<boolean>(false); // default: your month
+  const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
 
   // Derived
   const urb = URBANICITY[urbanicity];
@@ -819,28 +835,27 @@ const [includeOtherInChart, setIncludeOtherInChart] = useState<boolean>(true);
   const officeDaysPerWeek = 5;
 
   const commuteHoursPerWeek = useMemo(
-  () =>
-    transportMode === "remote"
-      ? 0
-      : (commuteMinsPerDay * officeDaysPerWeek) / 60,
-  [transportMode, commuteMinsPerDay, officeDaysPerWeek]
-);
+    () =>
+      transportMode === "remote"
+        ? 0
+        : (commuteMinsPerDay * officeDaysPerWeek) / 60,
+    [transportMode, commuteMinsPerDay, officeDaysPerWeek]
+  );
 
-// hoursWeek is now *work only*
-const workHoursPerWeek = useMemo(() => hoursWeek, [hoursWeek]);
+  // hoursWeek is now *work only*
+  const workHoursPerWeek = useMemo(() => hoursWeek, [hoursWeek]);
 
-// total job time = work + commute
-const totalJobHoursPerWeek = useMemo(
-  () => workHoursPerWeek + commuteHoursPerWeek,
-  [workHoursPerWeek, commuteHoursPerWeek]
-);
+  // total job time = work + commute
+  const totalJobHoursPerWeek = useMemo(
+    () => workHoursPerWeek + commuteHoursPerWeek,
+    [workHoursPerWeek, commuteHoursPerWeek]
+  );
 
-// this drives your "hour of freedom" denominator
-const hoursPerMonth = useMemo(
-  () => Math.round(totalJobHoursPerWeek * 4.3),
-  [totalJobHoursPerWeek]
-);
-
+  // this drives your "hour of freedom" denominator
+  const hoursPerMonth = useMemo(
+    () => Math.round(totalJobHoursPerWeek * 4.3),
+    [totalJobHoursPerWeek]
+  );
 
   const baseNetFromPrimary = useMemo(
     () => (isGross ? approximateFromGross(region, takeHome) : takeHome),
@@ -849,7 +864,7 @@ const hoursPerMonth = useMemo(
 
   const netMonthly = useMemo(() => {
     const base = baseNetFromPrimary;
-    return Math.max(0, base + otherIncome); // UPDATED
+    return Math.max(0, base + otherIncome);
   }, [baseNetFromPrimary, otherIncome]);
 
   // Net total for chart (optionally excludes Other income)
@@ -882,8 +897,7 @@ const hoursPerMonth = useMemo(
 
     // 2) Scale with actual minutes per day
     const typicalMinsPerDay = 60;
-    const ratio =
-      typicalMinsPerDay > 0 ? commuteMinsPerDay / typicalMinsPerDay : 1;
+    const ratio = typicalMinsPerDay > 0 ? commuteMinsPerDay / typicalMinsPerDay : 1;
 
     return Math.round(estimatedForContext * ratio);
   }, [transportMode, regionData, commuteMul, commuteOverride, commuteMinsPerDay]);
@@ -892,7 +906,12 @@ const hoursPerMonth = useMemo(
     () => (Object.keys(drivers) as DriverKey[]).reduce((s, k) => s + drivers[k], 0),
     [drivers]
   );
-  const variableSum = useMemo(() => spends.pet + spends.therapy + spends.supportOthers + spends.health, [spends]);
+
+  const variableSum = useMemo(
+    () => (Object.keys(spends) as SpendKey[]).reduce((sum, key) => sum + spends[key], 0),
+    [spends]
+  );
+
   const billsUtilities = useMemo(
     () =>
       billsIncluded
@@ -900,14 +919,17 @@ const hoursPerMonth = useMemo(
         : Math.round((region === "US" ? 180 : region === "UK" ? 130 : 120) * (urbanicity === "inner" ? 1.15 : 1)),
     [billsIncluded, region, urbanicity]
   );
+
   const dependentsMonthly = useMemo(
     () => childCostPreset(region, childrenCount, childrenAge),
     [region, childrenCount, childrenAge]
   );
+
   const healthcareMonthly = useMemo(
     () => computeHealthcare(region, usHealthPlan, usHealthcareOverride),
     [region, usHealthPlan, usHealthcareOverride]
   );
+
   const savingsMonthly = useMemo(
     () => computeSavingsFromRate(netMonthly, savingsRate),
     [netMonthly, savingsRate]
@@ -933,10 +955,12 @@ const hoursPerMonth = useMemo(
       ),
     [netMonthly, housing, commuteMonthly, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
+
   const effectivePerHour = useMemo(() => {
     const per = leftover / Math.max(1, hoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [leftover, hoursPerMonth]);
+
   const maintenancePct = useMemo(
     () => Math.max(0, Math.round((maintenanceSum / Math.max(1, netMonthly)) * 100)),
     [maintenanceSum, netMonthly]
@@ -947,14 +971,17 @@ const hoursPerMonth = useMemo(
     () => Math.round(regionData.commutePT * commuteMul),
     [regionData, commuteMul]
   );
+
   const typicalDriversSum = useMemo(
     () => (Object.keys(DRIVER_TYPICAL) as DriverKey[]).reduce((s, k) => s + DRIVER_TYPICAL[k], 0),
     []
   );
+
   const baselineMaintenance = useMemo(
     () => typicalDriversSum + variableSum + billsUtilities,
     [typicalDriversSum, variableSum, billsUtilities]
   );
+
   const baselineLeftover = useMemo(
     () =>
       Math.round(
@@ -970,18 +997,18 @@ const hoursPerMonth = useMemo(
       ),
     [netMonthly, housing, baselineCommute, baselineMaintenance, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
+
   const baselineFreedom = useMemo(() => {
     const per = baselineLeftover / Math.max(1, hoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [baselineLeftover, hoursPerMonth]);
 
   // --- Auto switch chart to "Your month" when commute is already zero ---
-useEffect(() => {
-  if (transportMode === "remote" || transportMode === "walk") {
-    setChartUseBaseline(false);
-  }
-}, [transportMode]);
-
+  useEffect(() => {
+    if (transportMode === "remote" || transportMode === "walk") {
+      setChartUseBaseline(false);
+    }
+  }, [transportMode]);
 
   // --- Challenge-mode derived values ---
   // Base commute cost for "0 remote days" in money terms
@@ -991,6 +1018,7 @@ useEffect(() => {
     () => Math.max(0, Math.round(effectiveBaseCommute * (1 - simRemoteDays / officeDaysPerWeek))),
     [effectiveBaseCommute, simRemoteDays, officeDaysPerWeek]
   );
+
   const simHousing = useMemo(() => Math.max(0, housing + simRentDelta), [housing, simRentDelta]);
   const simNet = useMemo(() => Math.max(0, netMonthly + simIncomeDelta), [netMonthly, simIncomeDelta]);
 
@@ -1021,10 +1049,12 @@ useEffect(() => {
       ),
     [simNet, simHousing, simCommute, maintenanceSum, dependentsMonthly, healthcareMonthly, debtMonthly, studentLoan, savingsMonthly]
   );
+
   const simFreedom = useMemo(() => {
     const per = simLeftover / Math.max(1, simHoursPerMonth);
     return Number.isFinite(per) ? Math.round(per * 100) / 100 : 0;
   }, [simLeftover, simHoursPerMonth]);
+
   const simDelta = useMemo(() => simLeftover - baselineLeftover, [simLeftover, baselineLeftover]);
   const simDeltaPerHour = useMemo(() => simFreedom - baselineFreedom, [simFreedom, baselineFreedom]);
 
@@ -1034,6 +1064,7 @@ useEffect(() => {
     if (max === min) return 0;
     return Math.max(0, Math.min(1, (x - min) / (max - min)));
   }
+
   const efficiencyScore = useMemo(() => {
     const s1 = 40 * norm(effectivePerHour, 0, 15);
     const leftoverRatio = netMonthly > 0 ? Math.max(0, Math.min(1, leftover / netMonthly)) : 0;
@@ -1060,7 +1091,7 @@ useEffect(() => {
         onclone: (clonedDoc) => {
           // Remove all external and embedded stylesheets in the cloned document
           clonedDoc
-            .querySelectorAll('style,link[rel="stylesheet"]')
+            .querySelectorAll("style,link[rel=\"stylesheet\"]")
             .forEach((el) => el.parentNode && el.parentNode.removeChild(el));
         },
       });
@@ -1155,7 +1186,6 @@ useEffect(() => {
 
   const badgeLeft = cityName ? cityName : `${regions.find((r) => r.id === region)?.label} · ${URBANICITY[urbanicity].label}`;
 
-  // ---------- Sections (rendered once) ----------
   const StartSection = (
     <Card className="max-w-3xl mx-auto bg-gradient-to-b from-white to-sky-50/40">
       <CardBody>
@@ -1390,17 +1420,17 @@ useEffect(() => {
           <div>
             <label className="text-sm">Hours you actually work each week (not counting commute)</label>
 
-  <InputRange
-    min={10}
-    max={80}
-    step={1}
-    value={hoursWeek}
-    onValue={setHoursWeek}
-    className="w-full mt-2"
-  />
-<div className="text-xs text-zinc-500 mt-1">
-  {hoursWeek} hours / week at work
-</div>
+            <InputRange
+              min={10}
+              max={80}
+              step={1}
+              value={hoursWeek}
+              onValue={setHoursWeek}
+              className="w-full mt-2"
+            />
+            <div className="text-xs text-zinc-500 mt-1">
+              {hoursWeek} hours / week at work
+            </div>
 
             {hoursWeird && (
               <div className="text-[11px] text-amber-600 mt-1">
@@ -1447,45 +1477,44 @@ useEffect(() => {
             </div>
 
             {transportMode !== "remote" && (
-  <div className="mt-3">
-    {/* Title + big live minute value */}
-    <div className="flex justify-between items-baseline text-sm">
-      <span>Time spent commuting on a working day (there & back)</span>
-      <span className="font-medium text-zinc-800">
-        {commuteMinsPerDay} min
-      </span>
-    </div>
+              <div className="mt-3">
+                {/* Title + big live minute value */}
+                <div className="flex justify-between items-baseline text-sm">
+                  <span>Time spent commuting on a working day (there & back)</span>
+                  <span className="font-medium text-zinc-800">
+                    {commuteMinsPerDay} min
+                  </span>
+                </div>
 
-    {/* Live weekly hours */}
-    <div className="text-xs text-zinc-600 mt-0.5">
-      ≈ {commuteHoursPerWeek.toFixed(1)} h/week
-    </div>
-     <div className="text-[11px] text-zinc-500">
-  This job takes about {totalJobHoursPerWeek.toFixed(1)} h/week in total,
-  combining work and commute.
-</div>
+                {/* Live weekly hours */}
+                <div className="text-xs text-zinc-600 mt-0.5">
+                  ≈ {commuteHoursPerWeek.toFixed(1)} h/week
+                </div>
+                <div className="text-[11px] text-zinc-500">
+                  This job takes about {totalJobHoursPerWeek.toFixed(1)} h/week in total,
+                  combining work and commute.
+                </div>
 
-    <InputRange
-      min={0}
-      max={180}
-      step={5}
-      value={commuteMinsPerDay}
-      onValue={setCommuteMinsPerDay}
-      className="w-full mt-2"
-    />
+                <InputRange
+                  min={0}
+                  max={180}
+                  step={5}
+                  value={commuteMinsPerDay}
+                  onValue={setCommuteMinsPerDay}
+                  className="w-full mt-2"
+                />
 
-    <div className="text-[11px] text-zinc-500 mt-1">
-      Used to calculate how much of your time and money goes into the commute.
-    </div>
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  Used to calculate how much of your time and money goes into the commute.
+                </div>
 
-    {hoursSplitWeird && (
-      <div className="text-[11px] text-amber-600 mt-1">
-        Your commute time is higher than your total work+commute hours. One of these might be off.
-      </div>
-    )}
-  </div>
-)}
-
+                {hoursSplitWeird && (
+                  <div className="text-[11px] text-amber-600 mt-1">
+                    Your commute time is higher than your total work+commute hours. One of these might be off.
+                  </div>
+                )}
+              </div>
+            )}
 
             {transportMode === "remote" && (
               <div className="mt-2">
@@ -1781,7 +1810,9 @@ useEffect(() => {
   const headlineFreedom = chartUseBaseline ? baselineFreedom : effectivePerHour;
   const netForHeadline = netForChart;
 
-    const RevealSection = (
+  const foodMonthly = spends.food;
+
+  const RevealSection = (
     <Card className="max-w-5xl mx-auto bg-gradient-to-b from-white to-emerald-50/40">
       <CardBody>
         <div className="h-1 w-full bg-zinc-200 rounded overflow-hidden">
@@ -1800,34 +1831,33 @@ useEffect(() => {
             <h2 className="text-xl font-semibold mt-2">Your month, in plain numbers</h2>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-  <input
-    placeholder={
-      abVariant === "A"
-        ? "you@email.com — send me my saved plan"
-        : "Email to save & send this plan"
-    }
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-    className="w-72 px-4 py-2 rounded-lg border bg-white"
-  />
-  <button
-    onClick={saveEmail}
-    className={`px-4 py-2 rounded-lg font-medium transition ${
-      emailSaved
-        ? "border border-emerald-600 text-emerald-600 bg-white"
-        : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-    }`}
-  >
-    {emailSaved
-      ? abVariant === "A"
-        ? "Plan saved & emailed"
-        : "Sent"
-      : abVariant === "A"
-      ? "Save & email my plan"
-      : "Email this plan to me"}
-  </button>
-</div>
-
+            <input
+              placeholder={
+                abVariant === "A"
+                  ? "you@email.com — send me my saved plan"
+                  : "Email to save & send this plan"
+              }
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-72 px-4 py-2 rounded-lg border bg-white"
+            />
+            <button
+              onClick={saveEmail}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                emailSaved
+                  ? "border border-emerald-600 text-emerald-600 bg-white"
+                  : "text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              }`}
+            >
+              {emailSaved
+                ? abVariant === "A"
+                  ? "Plan saved & emailed"
+                  : "Sent"
+                : abVariant === "A"
+                ? "Save & email my plan"
+                : "Email this plan to me"}
+            </button>
+          </div>
         </div>
         <div className="text-[11px] text-zinc-500 italic mt-1 sm:text-right">
           Anonymous analytics stored. Email optional and stored separately.
@@ -1907,13 +1937,13 @@ useEffect(() => {
             {/* Toggles & chart (NOT part of screenshot) */}
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-zinc-300">
               <label className="inline-flex items-center gap-2">
-    <input
-      type="checkbox"
-      checked={chartUseBaseline}
-      onChange={(e) => setChartUseBaseline(e.target.checked)}
-    />
-    Use typical transit costs in chart (auto unchecked if remote)
-  </label>
+                <input
+                  type="checkbox"
+                  checked={chartUseBaseline}
+                  onChange={(e) => setChartUseBaseline(e.target.checked)}
+                />
+                Use typical transit costs in chart (auto unchecked if remote)
+              </label>
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -1938,6 +1968,7 @@ useEffect(() => {
                 healthcare={healthcareMonthly}
                 debt={debtMonthly + studentLoan}
                 savings={savingsForChart}
+                food={foodMonthly}
               />
             </div>
             <div className="mt-4 text-xs text-zinc-400">
@@ -2174,7 +2205,8 @@ useEffect(() => {
                 <div className="text-sm">Maintenance totals</div>
                 <div className="text-xs text-zinc-500 mt-1">
                   Drivers: <Money value={driversSum} currency={currency} /> •
-                  Variable spends: <Money value={variableSum} currency={currency} /> •
+                  Variable spends (food, pets, support, health):{" "}
+                  <Money value={variableSum} currency={currency} /> •
                   Bills/utilities: <Money value={billsUtilities} currency={currency} />
                   {transportMode === "remote" && (
                     <>
