@@ -29,6 +29,10 @@ export default function EnoughHubPage() {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
       <section className="w-full max-w-4xl">
+        <div style={{ position: "fixed", top: 8, right: 8, zIndex: 9999, background: "yellow", padding: "4px 8px", fontSize: 10 }}>
+  HUB PAGE
+</div>
+
         <div className="rounded-3xl bg-white/95 shadow-xl border border-zinc-100 px-6 py-7 md:px-9 md:py-8">
           <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-400 mb-3">
             UK · Cost of living
