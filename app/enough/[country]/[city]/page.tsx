@@ -78,6 +78,11 @@ export default function EnoughCityPage({ params }: Props) {
           serverCountry={countrySlug}
         />
       </Suspense>
+      {/* DEBUG: REMOVE AFTER TESTING */}
+<pre className="mt-10 p-4 bg-black text-green-400 text-xs rounded-xl">
+  {JSON.stringify(params, null, 2)}
+</pre>
+
     </main>
   );
 }
