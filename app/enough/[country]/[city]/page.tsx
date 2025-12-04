@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import EnoughClient from "../../EnoughClient";
 
-export const dynamic = "force-dynamic"; // <-- ADD THIS
+export const dynamic = "force-dynamic";
 
 type Props = {
-  params?: {
-    country?: string;
-    city?: string;
+  params: {
+    country: string;
+    city: string;
   };
 };
 
@@ -16,13 +16,11 @@ export function generateMetadata({ params }: Props): Metadata {
   const rawCountry = params?.country ?? "uk";
   const rawCity = params?.city ?? "london";
 
-  const country =
-    typeof rawCountry === "string" ? rawCountry.toLowerCase() : "uk";
-  const city = typeof rawCity === "string" ? rawCity.toLowerCase() : "london";
+  const country = rawCountry.toLowerCase();
+  const city = rawCity.toLowerCase();
 
   const prettyCity = city.charAt(0).toUpperCase() + city.slice(1);
 
-  // If you like, you can use an env var here instead of hard-coding
   const canonicalBase =
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.real-cost-sim.com";
   const canonical = `${canonicalBase}/enough/${country}/${city}`;
@@ -36,7 +34,9 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-export default function EnoughCityPage() {
+export default function EnoughCityPage({ params }: Props) {
+  const { country, city } = params;
+
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
       <Suspense
@@ -46,7 +46,7 @@ export default function EnoughCityPage() {
           </div>
         }
       >
-        <EnoughClient />
+        <EnoughClient country={country} city={city} />
       </Suspense>
     </main>
   );
