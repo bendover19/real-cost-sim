@@ -1,12 +1,8 @@
-// app/enough/[country]/[city]/page.tsx
-
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import EnoughClient from "../../EnoughClient";
-import { UK_CITIES, generateCityDescription } from "../../../cityConfig";
 
-export const dynamic = "force-dynamic";
-
+// 1) Define the props type
 type Props = {
   params: {
     country?: string;
@@ -14,41 +10,18 @@ type Props = {
   };
 };
 
-// --- Metadata: try to get the real city, else fall back safely ---
+// 2) (Optional) if you use generateMetadata, it already takes { params }: Props
+
 export function generateMetadata({ params }: Props): Metadata {
-  const rawCountry = params.country ?? "uk";
-  const rawCity = params.city ?? "london";
-
-  const country =
-    typeof rawCountry === "string" ? rawCountry.toLowerCase() : "uk";
-  const citySlug =
-    typeof rawCity === "string" ? rawCity.toLowerCase() : "london";
-
-  const city = UK_CITIES.find((c) => c.slug === citySlug) || null;
-
-  const cityLabel = city
-    ? city.label
-    : citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
-
-  const canonicalBase =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.real-cost-sim.com";
-  const canonical = `${canonicalBase}/enough/${country}/${citySlug}`;
-
-  const description = city
-    ? generateCityDescription(city)
-    : `Rough estimate of what's left after rent, bills and commute for a single renter in ${cityLabel}.`;
-
+  // ... your existing metadata logic ...
   return {
-    title: `Is this salary enough to live in ${cityLabel}? | Real Cost Sim`,
-    description,
-    alternates: {
-      canonical,
-    },
+    title: "…",
+    description: "…",
   };
 }
 
-// --- Page: just render the client calculator like before ---
-export default function EnoughCityPage() {
+// 3) Accept params in the page component
+export default function EnoughCityPage({ params }: Props) {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
       <Suspense
@@ -59,8 +32,12 @@ export default function EnoughCityPage() {
         }
       >
         <EnoughClient />
-        <pre>{JSON.stringify(params, null, 2)}</pre>
       </Suspense>
+
+      {/* DEBUG: this now has access to params */}
+      <pre className="mt-16 p-4 bg-black text-green-400 text-xs rounded-xl">
+        {JSON.stringify(params, null, 2)}
+      </pre>
     </main>
   );
 }
