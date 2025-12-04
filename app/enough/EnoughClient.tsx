@@ -1,3 +1,4 @@
+// app/enough/EnoughClient.tsx
 "use client";
 
 import { useSearchParams, usePathname } from "next/navigation";
