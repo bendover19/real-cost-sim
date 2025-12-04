@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import {
   UK_CITIES,
   approximateNetFromGrossUK,
@@ -30,34 +30,35 @@ function formatGBP(value: number): string {
   });
 }
 
-export default function EnoughClient({
-  serverCity,
-  serverCountry = "uk",
-}: {
-  serverCity?: string;
-  serverCountry?: string;
-}) {
+export default function EnoughClient() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // Start with server values (SSR route params)
-  let country = serverCountry.toLowerCase();
-  let citySlug = serverCity ? serverCity.toLowerCase() : "";
+  // 1) From query string: /enough?country=uk&city=london&salary=28000
+  let country = (searchParams.get("country") ?? "").toLowerCase();
+  let citySlug = (searchParams.get("city") ?? "").toLowerCase();
+  let rawSalary = searchParams.get("salary");
 
-  // Querystring overrides (if provided)
-  const qsCountry = searchParams.get("country");
-  const qsCity = searchParams.get("city");
-  const rawSalary = searchParams.get("salary");
+  // 2) Fallback: from path /enough/uk/london
+  if ((!country || !citySlug) && pathname) {
+    const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","london"]
+    const idx = segments.indexOf("enough");
+    const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","london"]
 
-  if (qsCountry) country = qsCountry.toLowerCase();
-  if (qsCity) citySlug = qsCity.toLowerCase();
+    if (after.length >= 2) {
+      if (!country) country = after[0].toLowerCase();
+      if (!citySlug) citySlug = after[1].toLowerCase();
+    }
+  }
 
-  // If somehow still missing, do NOT default to London
-  if (!citySlug) citySlug = serverCity?.toLowerCase() ?? "";
+  // 3) Final defaults (for /enough)
+  if (!country) country = "uk";
+  if (!citySlug) citySlug = "london";
 
   const city = getCityConfig(citySlug);
   const salaryFromQuery = parseSalary(rawSalary);
 
-  // Default salary
+  // Default salary if none given anywhere
   const grossAnnual = salaryFromQuery || 28000;
 
   const cityLabel = city?.label ?? citySlug;
@@ -68,7 +69,7 @@ export default function EnoughClient({
     grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
   const netMonthly = netAnnual / 12;
 
-  // costs
+  // costs (rough)
   const rent = city?.typicalRentSingle ?? 1000;
   const bills = city?.typicalBills ?? 150;
   const commute = city?.typicalCommuteCost ?? 120;
@@ -85,12 +86,12 @@ export default function EnoughClient({
   const baseCityUrl = `/enough/${country}/${citySlug}`;
   const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual}`;
 
-  // nearby salaries
+  // Nearby salaries: +/- £2k
   const nearbySalaries = [grossAnnual - 2000, grossAnnual + 2000].filter(
     (n) => n > 0
   );
 
-  // anchor cities
+  // Anchor cities for cross-linking
   const anchorCitySlugs = [
     "london",
     "manchester",
@@ -115,7 +116,7 @@ export default function EnoughClient({
         </h1>
 
         <p className="text-sm md:text-[15px] text-zinc-600 mb-4 leading-relaxed">
-          Rough estimate of what’s left after typical rent, bills and commute
+          Rough estimate of what&apos;s left after typical rent, bills and commute
           for a single renter in {cityLabel}. For proper planning, plug your own
           numbers into the full Real Cost Simulator.
         </p>
@@ -200,16 +201,12 @@ export default function EnoughClient({
             <Row label="Net pay (after tax)" value={netMonthly} />
             <Row label="Rent" value={rent} />
             <Row label="Bills & council tax" value={bills} />
-            <Row
-              label="Commute costs"
-              value={commute}
-              note="~60–70 mins/day"
-            />
+            <Row label="Commute costs" value={commute} note="~60–70 mins/day" />
             <Row label="Estimated leftover" value={leftover} highlight />
           </div>
         </div>
 
-        {/* Link to main simulator */}
+        {/* link to main simulator */}
         <p className="text-[13px] text-zinc-600 mb-2">
           Try your exact numbers in the Real Cost Simulator:
         </p>
@@ -220,7 +217,7 @@ export default function EnoughClient({
           Open this scenario in the Real Cost Simulator →
         </a>
 
-        {/* Internal links */}
+        {/* Internal links: nearby salaries + other cities */}
         <div className="mt-8 space-y-5 text-sm text-zinc-700">
           {nearbySalaries.length > 0 && (
             <div>
