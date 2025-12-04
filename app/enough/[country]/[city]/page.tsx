@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import EnoughClient from "../../EnoughClient";
 
+export const dynamic = "force-dynamic"; // <-- ADD THIS
+
 type Props = {
   params?: {
     country?: string;
