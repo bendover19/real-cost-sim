@@ -35,9 +35,6 @@ export default function EnoughCityPage({ params }: Props) {
       </Suspense>
 
       {/* DEBUG: this now has access to params */}
-      <pre className="mt-16 p-4 bg-black text-green-400 text-xs rounded-xl">
-        {JSON.stringify(params, null, 2)}
-      </pre>
     </main>
   );
 }
