@@ -59,6 +59,7 @@ export default function EnoughCityPage() {
         }
       >
         <EnoughClient />
+        <pre>{JSON.stringify(params, null, 2)}</pre>
       </Suspense>
     </main>
   );
