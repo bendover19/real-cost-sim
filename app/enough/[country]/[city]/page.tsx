@@ -1,15 +1,17 @@
 // app/enough/[country]/[city]/page.tsx
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import EnoughClient from "../../EnoughClient";
+import EnoughClient from "../EnoughClient";
 
 export const dynamic = "force-dynamic";
 
+type Params = {
+  country?: string;
+  city?: string;
+};
+
 type Props = {
-  params: {
-    country: string;
-    city: string;
-  };
+  params?: Params;
 };
 
 export function generateMetadata({ params }: Props): Metadata {
@@ -35,7 +37,8 @@ export function generateMetadata({ params }: Props): Metadata {
 }
 
 export default function EnoughCityPage({ params }: Props) {
-  const { country, city } = params;
+  const country = (params?.country ?? "uk").toLowerCase();
+  const city = (params?.city ?? "london").toLowerCase();
 
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
