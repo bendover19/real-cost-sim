@@ -31,19 +31,19 @@ function formatGBP(value: number): string {
 }
 
 export default function EnoughClient({
-  country: initialCountry = "uk",
-  city: initialCity = "london",
+  serverCity,
+  serverCountry = "uk",
 }: {
-  country?: string;
-  city?: string;
+  serverCity?: string;
+  serverCountry?: string;
 }) {
   const searchParams = useSearchParams();
 
-  // Start with values from server (route params)
-  let country = initialCountry.toLowerCase();
-  let citySlug = initialCity.toLowerCase();
+  // Start with server values (SSR route params)
+  let country = serverCountry.toLowerCase();
+  let citySlug = serverCity ? serverCity.toLowerCase() : "";
 
-  // Allow querystring overrides if provided
+  // Querystring overrides (if provided)
   const qsCountry = searchParams.get("country");
   const qsCity = searchParams.get("city");
   const rawSalary = searchParams.get("salary");
@@ -51,10 +51,13 @@ export default function EnoughClient({
   if (qsCountry) country = qsCountry.toLowerCase();
   if (qsCity) citySlug = qsCity.toLowerCase();
 
+  // If somehow still missing, do NOT default to London
+  if (!citySlug) citySlug = serverCity?.toLowerCase() ?? "";
+
   const city = getCityConfig(citySlug);
   const salaryFromQuery = parseSalary(rawSalary);
 
-  // Default salary if none given
+  // Default salary
   const grossAnnual = salaryFromQuery || 28000;
 
   const cityLabel = city?.label ?? citySlug;
@@ -65,7 +68,7 @@ export default function EnoughClient({
     grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
   const netMonthly = netAnnual / 12;
 
-  // costs (rough)
+  // costs
   const rent = city?.typicalRentSingle ?? 1000;
   const bills = city?.typicalBills ?? 150;
   const commute = city?.typicalCommuteCost ?? 120;
@@ -87,7 +90,7 @@ export default function EnoughClient({
     (n) => n > 0
   );
 
-  // anchor cities for cross-linking
+  // anchor cities
   const anchorCitySlugs = [
     "london",
     "manchester",
@@ -112,12 +115,12 @@ export default function EnoughClient({
         </h1>
 
         <p className="text-sm md:text-[15px] text-zinc-600 mb-4 leading-relaxed">
-          Rough estimate of what&apos;s left after typical rent, bills and commute
+          Rough estimate of what’s left after typical rent, bills and commute
           for a single renter in {cityLabel}. For proper planning, plug your own
           numbers into the full Real Cost Simulator.
         </p>
 
-        {/* City-specific descriptive text for SEO / AdSense */}
+        {/* City-specific descriptive text */}
         {city && (
           <p className="text-[14px] md:text-[15px] text-zinc-700 leading-relaxed mb-6 whitespace-pre-line">
             {generateCityDescription(city)}
@@ -197,12 +200,16 @@ export default function EnoughClient({
             <Row label="Net pay (after tax)" value={netMonthly} />
             <Row label="Rent" value={rent} />
             <Row label="Bills & council tax" value={bills} />
-            <Row label="Commute costs" value={commute} note="~60–70 mins/day" />
+            <Row
+              label="Commute costs"
+              value={commute}
+              note="~60–70 mins/day"
+            />
             <Row label="Estimated leftover" value={leftover} highlight />
           </div>
         </div>
 
-        {/* link to main simulator */}
+        {/* Link to main simulator */}
         <p className="text-[13px] text-zinc-600 mb-2">
           Try your exact numbers in the Real Cost Simulator:
         </p>
@@ -213,7 +220,7 @@ export default function EnoughClient({
           Open this scenario in the Real Cost Simulator →
         </a>
 
-        {/* Internal links: nearby salaries + other cities */}
+        {/* Internal links */}
         <div className="mt-8 space-y-5 text-sm text-zinc-700">
           {nearbySalaries.length > 0 && (
             <div>
