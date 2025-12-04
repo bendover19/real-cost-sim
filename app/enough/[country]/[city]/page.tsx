@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import EnoughClient from "../../EnoughClient";
 import { UK_CITIES, generateCityDescription } from "../../../cityConfig";
 
+export const dynamic = "force-dynamic";
+
 type Props = {
   params: {
     country?: string;
@@ -12,63 +14,43 @@ type Props = {
   };
 };
 
-export const dynamic = "force-dynamic";
-
-// ---------- Metadata (SSR) ----------
+// --- Metadata: try to get the real city, else fall back safely ---
 export function generateMetadata({ params }: Props): Metadata {
-  const countrySlug = (params.country || "uk").toLowerCase();
-  const citySlug = (params.city || "").toLowerCase();
+  const rawCountry = params.country ?? "uk";
+  const rawCity = params.city ?? "london";
+
+  const country =
+    typeof rawCountry === "string" ? rawCountry.toLowerCase() : "uk";
+  const citySlug =
+    typeof rawCity === "string" ? rawCity.toLowerCase() : "london";
 
   const city = UK_CITIES.find((c) => c.slug === citySlug) || null;
 
   const cityLabel = city
     ? city.label
-    : citySlug
-    ? citySlug.charAt(0).toUpperCase() + citySlug.slice(1)
-    : "this city";
+    : citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
 
   const canonicalBase =
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.real-cost-sim.com";
-  const canonical = `${canonicalBase}/enough/${countrySlug}/${citySlug}`;
+  const canonical = `${canonicalBase}/enough/${country}/${citySlug}`;
+
+  const description = city
+    ? generateCityDescription(city)
+    : `Rough estimate of what's left after rent, bills and commute for a single renter in ${cityLabel}.`;
 
   return {
     title: `Is this salary enough to live in ${cityLabel}? | Real Cost Sim`,
-    description: `Rough estimate of rent, bills, commute and leftover salary for living in ${cityLabel}.`,
-    alternates: { canonical },
+    description,
+    alternates: {
+      canonical,
+    },
   };
 }
 
-// ---------- Page component ----------
-export default function EnoughCityPage({ params }: Props) {
-  const countrySlug = (params.country || "uk").toLowerCase();
-  const citySlug = (params.city || "").toLowerCase();
-
-  const city = UK_CITIES.find((c) => c.slug === citySlug) || null;
-
-  const cityLabel = city
-    ? city.label
-    : citySlug
-    ? citySlug.charAt(0).toUpperCase() + citySlug.slice(1)
-    : "this city";
-
-  const description = city ? generateCityDescription(city) : "";
-
+// --- Page: just render the client calculator like before ---
+export default function EnoughCityPage() {
   return (
-    <main className="min-h-screen flex flex-col items-center bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
-      {/* Server-rendered SEO block */}
-      <section className="w-full max-w-3xl mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900 mb-4">
-          Is this salary enough to live in {cityLabel}?
-        </h1>
-
-        {description && (
-          <p className="text-[14px] text-zinc-700 leading-relaxed whitespace-pre-line">
-            {description}
-          </p>
-        )}
-      </section>
-
-      {/* Client-side simulator */}
+    <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
       <Suspense
         fallback={
           <div className="mt-16 text-sm text-zinc-500">
@@ -76,13 +58,8 @@ export default function EnoughCityPage({ params }: Props) {
           </div>
         }
       >
-        <EnoughClient serverCity={citySlug} serverCountry={countrySlug} />
+        <EnoughClient />
       </Suspense>
-
-      {/* DEBUG: see what params Next is actually passing */}
-      <pre className="mt-16 p-4 bg-black text-green-400 text-xs rounded-xl w-full max-w-3xl overflow-auto">
-        {JSON.stringify(params, null, 2)}
-      </pre>
     </main>
   );
 }
