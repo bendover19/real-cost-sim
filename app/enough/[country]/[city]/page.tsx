@@ -2,7 +2,6 @@
 
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import EnoughClient from "../../EnoughClient";
 import { UK_CITIES, generateCityDescription } from "../../../cityConfig";
 
@@ -15,56 +14,10 @@ type Props = {
 
 export const dynamic = "force-dynamic";
 
-/**
- * Helper to extract /enough/<country>/<city> from the request path
- */
-function getSlugsFromPath(fallbackCountry = "uk") {
-  const h = headers();
-
-  // Try a few header options that can contain the path
-  const rawPath =
-    h.get("x-invoke-path") || h.get("next-url") || h.get("referer") || "";
-
-  // We only care about the path portion (strip protocol, domain, query)
-  let path = rawPath;
-
-  try {
-    // If it's a full URL, parse it
-    if (rawPath.startsWith("http")) {
-      path = new URL(rawPath).pathname;
-    }
-  } catch {
-    // ignore parse failure, stick with rawPath
-  }
-
-  const segments = path.split("?")[0].split("/").filter(Boolean); // e.g. ["enough","uk","southampton"]
-  const idx = segments.indexOf("enough");
-
-  let countrySlug = fallbackCountry.toLowerCase();
-  let citySlug = "";
-
-  if (idx !== -1 && segments.length >= idx + 3) {
-    countrySlug = segments[idx + 1].toLowerCase();
-    citySlug = segments[idx + 2].toLowerCase();
-  }
-
-  return { countrySlug, citySlug, rawPath, path, segments };
-}
-
-// ----------------------
-// Metadata
-// ----------------------
+// ---------- Metadata (SSR) ----------
 export function generateMetadata({ params }: Props): Metadata {
-  // Try params first
-  let countrySlug = (params.country || "uk").toLowerCase();
-  let citySlug = (params.city || "").toLowerCase();
-
-  // If params are missing, derive from path
-  if (!citySlug) {
-    const fromPath = getSlugsFromPath(countrySlug);
-    countrySlug = fromPath.countrySlug;
-    citySlug = fromPath.citySlug;
-  }
+  const countrySlug = (params.country || "uk").toLowerCase();
+  const citySlug = (params.city || "").toLowerCase();
 
   const city = UK_CITIES.find((c) => c.slug === citySlug) || null;
 
@@ -85,23 +38,10 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-// ----------------------
-// Page component
-// ----------------------
+// ---------- Page component ----------
 export default function EnoughCityPage({ params }: Props) {
-  // Try params first
-  let countrySlug = (params.country || "uk").toLowerCase();
-  let citySlug = (params.city || "").toLowerCase();
-
-  // If missing, derive from path
-  let debugInfo: any = { params };
-
-  if (!citySlug) {
-    const fromPath = getSlugsFromPath(countrySlug);
-    countrySlug = fromPath.countrySlug;
-    citySlug = fromPath.citySlug;
-    debugInfo = { ...debugInfo, fromPath };
-  }
+  const countrySlug = (params.country || "uk").toLowerCase();
+  const citySlug = (params.city || "").toLowerCase();
 
   const city = UK_CITIES.find((c) => c.slug === citySlug) || null;
 
@@ -139,16 +79,9 @@ export default function EnoughCityPage({ params }: Props) {
         <EnoughClient serverCity={citySlug} serverCountry={countrySlug} />
       </Suspense>
 
-      {/* Debug info – REMOVE WHEN DONE */}
+      {/* DEBUG: see what params Next is actually passing */}
       <pre className="mt-16 p-4 bg-black text-green-400 text-xs rounded-xl w-full max-w-3xl overflow-auto">
-        {JSON.stringify(
-          {
-            debugInfo,
-            computed: { countrySlug, citySlug },
-          },
-          null,
-          2
-        )}
+        {JSON.stringify(params, null, 2)}
       </pre>
     </main>
   );
