@@ -2141,103 +2141,60 @@ export default function Page() {
                 </div>
               </CardBody>
             </Card>
+      {/* Decision Pack upsell */}
+      <Card className="border-rose-200 bg-rose-50/80 shadow-md">
+        <CardBody className="space-y-3">
+          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+            <span className="text-xl">📄</span>
+            <span>Turn this into a Decision Pack</span>
+          </div>
 
-            <Card>
-              <CardBody>
-                <div className="text-sm">Your chosen month (with your commute & drivers)</div>
-                <div className="text-2xl font-semibold mt-1">
-                  Kept: <Money value={leftover} currency={currency} clampZero={false} />
-                </div>
-                <div className="text-sm mt-1">
-                  {effectivePerHour >= 0 ? (
-                    <>
-                      After every hour you spend working (including commuting), you truly keep about{" "}
-                      <strong>
-                        {currency}
-                        {effectivePerHour.toFixed(2)}
-                      </strong>{" "}
-                      of disposable money.
-                    </>
-                  ) : (
-                    <span className="text-rose-700">
-                      You’re effectively losing money for every hour worked — your costs of working
-                      (housing, transport, dependents, etc.) are higher than your take-home pay.
-                    </span>
-                  )}
-                </div>
+          <p className="text-xs text-zinc-700 leading-relaxed">
+            Get a printable, personalised PDF that turns this scenario into a
+            clear decision document — including your real hourly wage, stress
+            tests, city comparison and negotiation targets.
+          </p>
 
-                <div className="text-xs text-zinc-500 mt-2">
-                  Commute:{" "}
-                  {transportMode === "remote"
-                    ? "remote"
-                    : transportMode === "pt"
-                    ? "public transport"
-                    : transportMode === "walk"
-                    ? "walk/bike"
-                    : "driving/taxis"}{" "}
-                  • Maintenance: {maintenancePct}% • Kids:{" "}
-                  <Money value={dependentsMonthly} currency={currency} />
-                </div>
-              </CardBody>
-            </Card>
+          <ul className="text-xs text-zinc-700 space-y-1">
+            <li>• Monthly money flow chart (where each £ actually goes)</li>
+            <li>• Real hourly wage after commute & “maintenance” costs</li>
+            <li>• Stress tests for rent, bills & job changes</li>
+            <li>• Comfort salary target & negotiation guidance</li>
+          </ul>
 
-            <Card>
-              <CardBody>
-                <div className="text-sm">Commute estimate</div>
-                <div className="text-2xl font-semibold mt-1">
-                  <Money value={commuteMonthly} currency={currency} /> / month
-                </div>
-                <div className="text-xs text-zinc-500 mt-2">
-                  Context: {COMMUTE_CTX[commuteCtx].label} • Area: {URBANICITY[urbanicity].label}.
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1">
-                  {transportMode === "remote" || transportMode === "walk"
-                    ? "Assuming no daily commute for this setup."
-                    : `Assuming about ${officeDaysPerWeek} days/week × ${commuteMinsPerDay} minutes/day ≈ ${commuteHoursPerWeek.toFixed(
-                        1
-                      )} h/week spent commuting.`}
-                </div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardBody>
-                <div className="text-sm">Maintenance totals</div>
-                <div className="text-xs text-zinc-500 mt-1">
-                  Drivers: <Money value={driversSum} currency={currency} /> •
-                  Variable spends (food, pets, support, health):{" "}
-                  <Money value={variableSum} currency={currency} /> •
-                  Bills/utilities: <Money value={billsUtilities} currency={currency} />
-                  {transportMode === "remote" && (
-                    <>
-                      {" "}
-                      • WFH utilities uplift: <Money value={wfhUtilities} currency={currency} />
-                    </>
-                  )}
-                </div>
-              </CardBody>
-            </Card>
-
-            {healthcareMonthly > 0 && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm">Healthcare gap</div>
-                  <div className="text-2xl font-semibold mt-1">
-                    <Money value={healthcareMonthly} currency={currency} /> / month
-                  </div>
-                </CardBody>
-              </Card>
+          <div className="pt-2">
+            <a
+              href={
+                sessionId
+                  ? `https://YOURSTORE.gumroad.com/l/decision-pack?wanted=true&RCS%20Session%20ID=${encodeURIComponent(
+                      sessionId
+                    )}${email ? `&email=${encodeURIComponent(email)}` : ""}`
+                  : "6084129901965.gumroad.com/l/zrgnj"
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center w-full rounded-full 
+                         bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2.5 
+                         text-xs font-semibold text-white shadow-sm 
+                         hover:from-rose-700 hover:to-pink-700 
+                         disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Get my Decision Pack (PDF) – £3
+            </a>
+            {!sessionId && (
+              <p className="mt-1 text-[10px] text-zinc-500 text-center">
+                One sec — we’re just attaching this to your current simulation.
+              </p>
             )}
+          </div>
 
-            {(savingsMonthly > 0 || savingsRate > 0) && (
-              <Card>
-                <CardBody>
-                  <div className="text-sm">Savings / pension</div>
-                  <div className="text-2xl font-semibold mt-1">
-                    <Money value={savingsMonthly} currency={currency} /> / month ({savingsRate}%)
-                  </div>
-                </CardBody>
-              </Card>
+          <p className="text-[10px] text-zinc-500">
+            Your email and numbers stay anonymous. You can always rerun the sim
+            and generate a fresh pack later.
+          </p>
+        </CardBody>
+      </Card>
+
             )}
 
             <div className="flex gap-2">
