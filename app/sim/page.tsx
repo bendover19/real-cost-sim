@@ -2165,23 +2165,24 @@ export default function Page() {
 
     <div className="pt-2">
       <a
-        href={
+  href={
+    sessionId
+      ? `https://6084129901965.gumroad.com/l/zrgnj?wanted=true&RCS_Session_ID=${encodeURIComponent(
           sessionId
-            ? `https://6084129901965.gumroad.com/l/zrgnj?wanted=true&RCS_Session_ID=${encodeURIComponent(
-                sessionId
-              )}${email ? `&email=${encodeURIComponent(email)}` : ""}`
-            : "https://6084129901965.gumroad.com/l/zrgnj"
-        }
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center w-full rounded-full 
-                   bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2.5 
-                   text-xs font-semibold text-white shadow-sm 
-                   hover:from-rose-700 hover:to-pink-700 
-                   disabled:opacity-60 disabled:cursor-not-allowed"
-      >
-        Get my Decision Pack (PDF) – £3
-      </a>
+        )}${email ? `&email=${encodeURIComponent(email)}` : ""}`
+      : "https://6084129901965.gumroad.com/l/zrgnj"
+  }
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex items-center justify-center w-full rounded-full 
+             bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2.5 
+             text-xs font-semibold text-white !text-white no-underline
+             shadow-sm hover:from-rose-700 hover:to-pink-700 
+             disabled:opacity-60 disabled:cursor-not-allowed"
+>
+  <span className="text-white no-underline">Get my Decision Pack (PDF) – £3</span>
+</a>
+
 
       {!sessionId && (
         <p className="mt-1 text-[10px] text-zinc-500 text-center">
