@@ -2142,58 +2142,57 @@ export default function Page() {
               </CardBody>
             </Card>
       {/* Decision Pack upsell */}
-      <Card className="border-rose-200 bg-rose-50/80 shadow-md">
-        <CardBody className="space-y-3">
-          <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
-            <span className="text-xl">📄</span>
-            <span>Turn this into a Decision Pack</span>
-          </div>
+<Card className="border-rose-200 bg-gradient-to-br from-rose-50 via-sky-50 to-violet-50 shadow-md">
+  <CardBody className="space-y-3">
 
-          <p className="text-xs text-zinc-700 leading-relaxed">
-            Get a printable, personalised PDF that turns this scenario into a
-            clear decision document — including your real hourly wage, stress
-            tests, city comparison and negotiation targets.
-          </p>
+    <div className="text-sm font-semibold text-rose-800 flex items-center gap-2">
+      <span className="text-xl">📄</span>
+      <span>Turn this into a Decision Pack</span>
+    </div>
 
-          <ul className="text-xs text-zinc-700 space-y-1">
-            <li>• Monthly money flow chart (where each £ actually goes)</li>
-            <li>• Real hourly wage after commute & “maintenance” costs</li>
-            <li>• Stress tests for rent, bills & job changes</li>
-            <li>• Comfort salary target & negotiation guidance</li>
-          </ul>
+    <p className="text-xs text-zinc-700 leading-relaxed">
+      Get a printable, personalised PDF that turns this scenario into a
+      clear decision document — including your real hourly wage, stress
+      tests, city comparison and negotiation targets.
+    </p>
 
-          <div className="pt-2">
-            <a
-              href={
+    <ul className="text-xs text-zinc-700 space-y-1">
+      <li>• Monthly money flow chart (where each £ actually goes)</li>
+      <li>• Real hourly wage after commute & “maintenance” costs</li>
+      <li>• Stress tests for rent, bills & job changes</li>
+      <li>• Comfort salary target & negotiation guidance</li>
+    </ul>
+
+    <div className="pt-2">
+      <a
+        href={
+          sessionId
+            ? `https://6084129901965.gumroad.com/l/zrgnj?wanted=true&RCS_Session_ID=${encodeURIComponent(
                 sessionId
-                  ? `https://YOURSTORE.gumroad.com/l/decision-pack?wanted=true&RCS%20Session%20ID=${encodeURIComponent(
-                      sessionId
-                    )}${email ? `&email=${encodeURIComponent(email)}` : ""}`
-                  : "6084129901965.gumroad.com/l/zrgnj"
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-full rounded-full 
-                         bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2.5 
-                         text-xs font-semibold text-white shadow-sm 
-                         hover:from-rose-700 hover:to-pink-700 
-                         disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Get my Decision Pack (PDF) – £3
-            </a>
-            {!sessionId && (
-              <p className="mt-1 text-[10px] text-zinc-500 text-center">
-                One sec — we’re just attaching this to your current simulation.
-              </p>
-            )}
-          </div>
+              )}${email ? `&email=${encodeURIComponent(email)}` : ""}`
+            : "https://6084129901965.gumroad.com/l/zrgnj"
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center justify-center w-full rounded-full 
+                   bg-gradient-to-r from-rose-600 to-pink-600 px-4 py-2.5 
+                   text-xs font-semibold text-white shadow-sm 
+                   hover:from-rose-700 hover:to-pink-700 
+                   disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        Get my Decision Pack (PDF) – £3
+      </a>
 
-          <p className="text-[10px] text-zinc-500">
-            Your email and numbers stay anonymous. You can always rerun the sim
-            and generate a fresh pack later.
-          </p>
-        </CardBody>
-      </Card>
+      {!sessionId && (
+        <p className="mt-1 text-[10px] text-zinc-500 text-center">
+          One sec — we’re just attaching this to your current simulation.
+        </p>
+      )}
+    </div>
+
+  </CardBody>
+</Card>
+
 
             
 
