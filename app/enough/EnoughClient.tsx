@@ -225,15 +225,14 @@ export default function EnoughClient() {
   href={simulatorUrl}
   className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg overflow-hidden"
 >
-  {/* pulsing ring behind the text */}
-  <span className="absolute inset-0 rounded-full border border-rose-300 animate-ping z-0"></span>
+  {/* Background pulse behind text */}
+  <span className="absolute inset-0 rounded-full border border-rose-300 animate-ping opacity-60 z-0"></span>
 
-  {/* button text (on top, always white) */}
-  <span className="relative z-10">
+  {/* Force white text, always on top */}
+  <span className="relative z-10 text-white !text-white">
     Open this scenario in the Real Cost Simulator →
   </span>
 </a>
-
           <p className="text-[11px] text-zinc-500 mt-2 text-center">
             Loads instantly · No signup needed
           </p>
