@@ -5,7 +5,7 @@ import {
   UK_CITIES,
   approximateNetFromGrossUK,
   generateCityDescription,
-} from "../cityConfig";
+} from "@app/cityConfig";
 
 type CityConfig = (typeof UK_CITIES)[number];
 
@@ -206,16 +206,25 @@ export default function EnoughClient() {
           </div>
         </div>
 
-        {/* link to main simulator */}
-        <p className="text-[13px] text-zinc-600 mb-2">
-          Try your exact numbers in the Real Cost Simulator:
-        </p>
-        <a
-          href={simulatorUrl}
-          className="inline-flex items-center justify-center rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[13px] font-semibold px-4 py-2 transition-colors"
-        >
-          Open this scenario in the Real Cost Simulator →
-        </a>
+        {/* 🔥 Main CTA: open this scenario in simulator */}
+        <div className="my-8 p-5 rounded-2xl bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200">
+          <h3 className="text-[15px] font-semibold text-zinc-900 mb-2">
+            Try this exact scenario in the Real Cost Simulator
+          </h3>
+          <p className="text-[13px] text-zinc-600 mb-4 leading-relaxed">
+            See your full breakdown including tax, commute time value, rent
+            impact, and your hourly freedom score for this salary in {cityLabel}.
+          </p>
+          <a
+            href={simulatorUrl}
+            className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg after:absolute after:inset-0 after:rounded-full after:border after:border-rose-300 after:animate-ping"
+          >
+            Open this scenario in the Real Cost Simulator →
+          </a>
+          <p className="text-[11px] text-zinc-500 mt-2 text-center">
+            Loads instantly · No signup needed
+          </p>
+        </div>
 
         {/* Internal links: nearby salaries + other cities */}
         <div className="mt-8 space-y-5 text-sm text-zinc-700">
@@ -233,7 +242,7 @@ export default function EnoughClient() {
                   >
                     {`Is £${s.toLocaleString(
                       "en-GB"
-                    )} enough in ${cityLabel}?`}
+                    )} enough in {cityLabel}?`.replace("{cityLabel}", cityLabel)}
                   </a>
                 ))}
               </div>
