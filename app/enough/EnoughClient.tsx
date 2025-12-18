@@ -34,16 +34,14 @@ export default function EnoughClient() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // 1) From query string: /enough?country=uk&city=london&salary=28000
   let country = (searchParams.get("country") ?? "").toLowerCase();
   let citySlug = (searchParams.get("city") ?? "").toLowerCase();
   let rawSalary = searchParams.get("salary");
 
-  // 2) Fallback: from path /enough/uk/london
   if ((!country || !citySlug) && pathname) {
-    const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","london"]
+    const segments = pathname.split("/").filter(Boolean);
     const idx = segments.indexOf("enough");
-    const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","london"]
+    const after = idx === -1 ? [] : segments.slice(idx + 1);
 
     if (after.length >= 2) {
       if (!country) country = after[0].toLowerCase();
@@ -51,25 +49,21 @@ export default function EnoughClient() {
     }
   }
 
-  // 3) Final defaults (for /enough)
   if (!country) country = "uk";
   if (!citySlug) citySlug = "london";
 
   const city = getCityConfig(citySlug);
   const salaryFromQuery = parseSalary(rawSalary);
 
-  // Default salary if none given anywhere
   const grossAnnual = salaryFromQuery || 28000;
 
   const cityLabel = city?.label ?? citySlug;
   const countryLabel = (city?.country ?? country).toUpperCase();
 
-  // income
   const netAnnual =
     grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
   const netMonthly = netAnnual / 12;
 
-  // costs (rough)
   const rent = city?.typicalRentSingle ?? 1000;
   const bills = city?.typicalBills ?? 150;
   const commute = city?.typicalCommuteCost ?? 120;
@@ -86,12 +80,10 @@ export default function EnoughClient() {
   const baseCityUrl = `/enough/${country}/${citySlug}`;
   const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual}`;
 
-  // Nearby salaries: +/- £2k
   const nearbySalaries = [grossAnnual - 2000, grossAnnual + 2000].filter(
     (n) => n > 0
   );
 
-  // Anchor cities for cross-linking
   const anchorCitySlugs = [
     "london",
     "manchester",
@@ -107,6 +99,7 @@ export default function EnoughClient() {
   return (
     <section className="w-full max-w-3xl">
       <div className="rounded-3xl bg-white/90 shadow-xl border border-zinc-100 px-6 py-7 md:px-9 md:py-8">
+        
         <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-400 mb-3">
           {countryLabel} · {cityLabel}
         </p>
@@ -135,56 +128,15 @@ export default function EnoughClient() {
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 text-sm">
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
-              Gross salary
-            </p>
-            <p className="font-semibold text-zinc-900">
-              {formatGBP(grossAnnual)}
-              <span className="text-[11px] text-zinc-500"> / year</span>
-            </p>
-          </div>
+          <SummaryCard label="Gross salary" value={`${formatGBP(grossAnnual)} / year`} />
+          <SummaryCard label="Est. take-home" value={`${formatGBP(netMonthly)} / month`} />
+          <SummaryCard
+            label="Est. leftover"
+            value={`${formatGBP(leftover)} / month`}
+            highlight={leftover < 0 ? "text-rose-600" : leftover < 400 ? "text-amber-600" : "text-emerald-600"}
+          />
+          <SummaryCard label="Hour of freedom*" value={leftover > 0 ? "positive" : "negative"} smallNote />
 
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
-              Est. take-home
-            </p>
-            <p className="font-semibold text-zinc-900">
-              {formatGBP(netMonthly)}
-              <span className="text-[11px] text-zinc-500"> / month</span>
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
-              Est. leftover
-            </p>
-            <p
-              className={
-                "font-semibold " +
-                (leftover < 0
-                  ? "text-rose-600"
-                  : leftover < 400
-                  ? "text-amber-600"
-                  : "text-emerald-600")
-              }
-            >
-              {formatGBP(leftover)}
-              <span className="text-[11px] text-zinc-500"> / month</span>
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
-              Hour of freedom*
-            </p>
-            <p className="font-semibold text-zinc-900">
-              {leftover > 0 ? "positive" : "negative"}
-            </p>
-            <p className="text-[10px] text-zinc-400 mt-1">
-              *very rough, based on leftovers vs. working hours
-            </p>
-          </div>
         </div>
 
         {/* Breakdown */}
@@ -206,28 +158,32 @@ export default function EnoughClient() {
           </div>
         </div>
 
-        {/* 🔥 Main CTA: open this scenario in simulator */}
+        {/* 🔥 CTA Block */}
         <div className="my-8 p-5 rounded-2xl bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200">
           <h3 className="text-[15px] font-semibold text-zinc-900 mb-2">
             Try this exact scenario in the Real Cost Simulator
           </h3>
+
           <p className="text-[13px] text-zinc-600 mb-4 leading-relaxed">
-            See your full breakdown including tax, commute time value, rent
-            impact, and your hourly freedom score for this salary in {cityLabel}.
+            See your full breakdown including tax, commute time value, rent impact,
+            and your hourly freedom score for this salary in {cityLabel}.
           </p>
+
           <a
             href={simulatorUrl}
-            className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg after:absolute after:inset-0 after:rounded-full after:border after:border-rose-300 after:animate-ping"
+            className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg
+                       after:absolute after:inset-0 after:rounded-full after:border after:border-rose-300 after:animate-ping"
           >
             Open this scenario in the Real Cost Simulator →
           </a>
+
           <p className="text-[11px] text-zinc-500 mt-2 text-center">
             Loads instantly · No signup needed
           </p>
         </div>
 
-        {/* Internal links: nearby salaries + other cities */}
-        <div className="mt-8 space-y-5 text-sm text-zinc-700">
+        {/* Internal links */}
+        <div className="mt-8 space-y-5 text-sm text-zinc-700 [a]:text-zinc-700 [a]:hover:text-zinc-900">
           {nearbySalaries.length > 0 && (
             <div>
               <h3 className="font-semibold mb-2">
@@ -240,9 +196,7 @@ export default function EnoughClient() {
                     href={`${baseCityUrl}?salary=${s}`}
                     className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
                   >
-                    {`Is £${s.toLocaleString(
-                      "en-GB"
-                    )} enough in {cityLabel}?`.replace("{cityLabel}", cityLabel)}
+                    {`Is £${s.toLocaleString("en-GB")} enough in ${cityLabel}?`}
                   </a>
                 ))}
               </div>
@@ -254,14 +208,11 @@ export default function EnoughClient() {
             <div className="flex flex-wrap gap-2">
               {otherCities.map((slug) => {
                 const conf = UK_CITIES.find((c) => c.slug === slug);
-                const label =
-                  conf?.label ??
-                  slug.charAt(0).toUpperCase() + slug.slice(1);
-                const href = `/enough/${country}/${slug}?salary=${grossAnnual}`;
+                const label = conf?.label ?? slug;
                 return (
                   <a
                     key={slug}
-                    href={href}
+                    href={`/enough/${country}/${slug}?salary=${grossAnnual}`}
                     className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
                   >
                     {`Same salary in ${label}`}
@@ -271,8 +222,27 @@ export default function EnoughClient() {
             </div>
           </div>
         </div>
+
       </div>
     </section>
+  );
+}
+
+function SummaryCard({ label, value, highlight, smallNote }: any) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
+        {label}
+      </p>
+      <p className={`font-semibold text-zinc-900 ${highlight || ""}`}>
+        {value}
+      </p>
+      {smallNote && (
+        <p className="text-[10px] text-zinc-400 mt-1">
+          *very rough, based on leftovers vs. working hours
+        </p>
+      )}
+    </div>
   );
 }
 
