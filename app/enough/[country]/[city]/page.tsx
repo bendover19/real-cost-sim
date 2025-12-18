@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import EnoughClient from "@app/EnoughClient";
+import EnoughClient from "@app/enough/EnoughClient";
 import { UK_CITIES, generateCityDescription } from "@app/cityConfig";
+
 
 
 
