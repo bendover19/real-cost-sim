@@ -110,7 +110,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  // Programmatic "Is this salary enough in CITY?" pages
+  // Programmatic "Is this salary enough in CITY?" base city pages
   const enoughCityUrls: MetadataRoute.Sitemap = UK_CITIES.map((city) => ({
     url: `${base}/enough/uk/${city.slug}/`,
     lastModified: today,
@@ -118,5 +118,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticUrls, ...enoughCityUrls];
+  // Programmatic salary × city pages for key bands
+  const SALARY_BANDS = [
+    20000, 25000, 30000, 35000,
+    40000, 45000, 50000, 55000, 60000,
+  ];
+
+  const salaryCityUrls: MetadataRoute.Sitemap = UK_CITIES.flatMap((city) =>
+    SALARY_BANDS.map((salary) => ({
+      url: `${base}/enough/uk/${city.slug}/${salary}/`,
+      lastModified: today,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    }))
+  );
+
+  return [...staticUrls, ...enoughCityUrls, ...salaryCityUrls];
 }
