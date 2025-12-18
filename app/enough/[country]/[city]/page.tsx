@@ -3,9 +3,6 @@ import { Suspense } from "react";
 import EnoughClient from "@app/enough/EnoughClient";
 import { UK_CITIES, generateCityDescription } from "@app/cityConfig";
 
-
-
-
 type Props = {
   params: {
     country?: string;
@@ -14,6 +11,14 @@ type Props = {
 };
 
 const BASE_URL = "https://www.real-cost-sim.com";
+
+// 🔥 NEW: Pre-render all UK city pages at build time
+export async function generateStaticParams() {
+  return UK_CITIES.map((city) => ({
+    country: "uk",
+    city: city.slug,
+  }));
+}
 
 export function generateMetadata({ params }: Props): Metadata {
   const country = (params.country ?? "uk").toLowerCase();
