@@ -3,6 +3,13 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 /*import html2canvas from "html2canvas";*/
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 /* ============================================================
    Real Cost Simulator — page.tsx
    - Sliders unchanged (plus new Food & groceries)
