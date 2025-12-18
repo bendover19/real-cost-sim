@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import EnoughClient from "../../EnoughClient";
+import { UK_CITIES, generateCityDescription } from "../../cityConfig";
 
-// 1) Define the props type
 type Props = {
   params: {
     country?: string;
@@ -10,17 +10,39 @@ type Props = {
   };
 };
 
-// 2) (Optional) if you use generateMetadata, it already takes { params }: Props
+const BASE_URL = "https://www.real-cost-sim.com";
 
 export function generateMetadata({ params }: Props): Metadata {
-  // ... your existing metadata logic ...
+  const country = (params.country ?? "uk").toLowerCase();
+  const citySlug = (params.city ?? "london").toLowerCase();
+
+  const city = UK_CITIES.find((c) => c.slug === citySlug);
+  const cityLabel =
+    city?.label ?? citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
+
+  const title = `Is your salary enough to live in ${cityLabel}? | Real Cost Simulator`;
+
+  // short, city-specific meta description
+  const description =
+    city
+      ? generateCityDescription(city).slice(0, 155)
+      : `Rough breakdown of rent, bills, commute and leftovers for single renters in ${cityLabel}.`;
+
+  const canonical = `${BASE_URL}/enough/${country}/${citySlug}/`;
+
   return {
-    title: "…",
-    description: "…",
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
   };
 }
 
-// 3) Accept params in the page component
 export default function EnoughCityPage({ params }: Props) {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
@@ -33,8 +55,6 @@ export default function EnoughCityPage({ params }: Props) {
       >
         <EnoughClient />
       </Suspense>
-
-      {/* DEBUG: this now has access to params */}
     </main>
   );
 }
