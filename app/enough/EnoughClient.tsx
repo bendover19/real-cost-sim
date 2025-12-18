@@ -222,11 +222,18 @@ export default function EnoughClient() {
             impact, and your hourly freedom score for this salary in {cityLabel}.
           </p>
           <a
-            href={simulatorUrl}
-            className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg after:absolute after:inset-0 after:rounded-full after:border after:border-rose-300 after:animate-ping"
-          >
-            Open this scenario in the Real Cost Simulator →
-          </a>
+  href={simulatorUrl}
+  className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg overflow-hidden"
+>
+  {/* pulsing ring behind the text */}
+  <span className="absolute inset-0 rounded-full border border-rose-300 animate-ping z-0"></span>
+
+  {/* button text (on top, always white) */}
+  <span className="relative z-10">
+    Open this scenario in the Real Cost Simulator →
+  </span>
+</a>
+
           <p className="text-[11px] text-zinc-500 mt-2 text-center">
             Loads instantly · No signup needed
           </p>
