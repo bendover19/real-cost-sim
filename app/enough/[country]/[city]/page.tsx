@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import EnoughClient from "../../../EnoughClient";
-import { UK_CITIES, generateCityDescription } from "../../../cityConfig";
+import EnoughClient from "@app/EnoughClient";
+import { UK_CITIES, generateCityDescription } from "@app/cityConfig";
+
 
 
 type Props = {
