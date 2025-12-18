@@ -2,17 +2,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async redirects() {
-    return [
-      {
-        // Legacy URLs: /enough/uk/london/32000
-        source: "/enough/:country/:city/:salary",
-        // New canonical form: /enough/uk/london?salary=32000
-        destination: "/enough/:country/:city?salary=:salary",
-        permanent: true,
-      },
-    ];
-  },
+  // Add other Next.js config here if you ever need it.
+  // No redirects for /enough now – we want /enough/uk/city/salary
+  // to be real, indexable pages.
 };
 
 export default nextConfig;
