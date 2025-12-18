@@ -19,12 +19,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
-      url: `${base}/sim`,
-      lastModified: today,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
       url: `${base}/enough`,
       lastModified: today,
       changeFrequency: "weekly",
