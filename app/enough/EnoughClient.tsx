@@ -170,12 +170,21 @@ export default function EnoughClient() {
           </p>
 
           <a
-            href={simulatorUrl}
-            className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg
-                       after:absolute after:inset-0 after:rounded-full after:border after:border-rose-300 after:animate-ping"
-          >
-            Open this scenario in the Real Cost Simulator →
-          </a>
+  href={simulatorUrl}
+  className="
+    relative block w-full text-center rounded-full
+    bg-rose-600 hover:bg-rose-700
+    text-white visited:text-white no-underline
+    font-semibold text-[14px] tracking-tight
+    px-5 py-3 transition-all shadow-md hover:shadow-lg
+    after:absolute after:inset-0 after:rounded-full
+    after:border after:border-rose-300 after:animate-ping
+  "
+  style={{ color: "#ffffff" }}
+>
+  Open this scenario in the Real Cost Simulator →
+</a>
+
 
           <p className="text-[11px] text-zinc-500 mt-2 text-center">
             Loads instantly · No signup needed
