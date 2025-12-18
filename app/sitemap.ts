@@ -112,7 +112,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Programmatic "Is this salary enough in CITY?" pages
   const enoughCityUrls: MetadataRoute.Sitemap = UK_CITIES.map((city) => ({
-    url: `${base}/enough/uk/${city.slug}`,
+    url: `${base}/enough/uk/${city.slug}/`,
     lastModified: today,
     changeFrequency: "monthly",
     priority: 0.7,
