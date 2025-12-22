@@ -7,131 +7,42 @@ export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://www.real-cost-sim.com";
 
-  // Use a simple YYYY-MM-DD string (safe for XML sitemaps)
-  const today = new Date().toISOString().split("T")[0];
+  // Group-level meaningful update dates
+  const CORE_CALCULATORS_UPDATED = "2025-12-11";
+  const CITY_PAGES_UPDATED = "2025-12-20";
+  const STATIC_PAGES_UPDATED = "2025-12-18";
+  const LEGAL_PAGES_UPDATED = "2025-11-10";
 
   const staticUrls: MetadataRoute.Sitemap = [
-    // Core
-    {
-      url: `${base}/`,
-      lastModified: today,
-      changeFrequency: "daily",
-      priority: 1.0,
-    },
-    {
-      url: `${base}/enough`,
-      lastModified: today,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
+    // Core / hubs
+    { url: `${base}/`, lastModified: STATIC_PAGES_UPDATED },
+    { url: `${base}/enough`, lastModified: STATIC_PAGES_UPDATED },
 
-    // Calculator / landing pages
-    {
-      url: `${base}/real-hourly-wage-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/commute-cost-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/cost-of-working-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/move-city-cost-of-living-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/part-time-vs-full-time-hourly-pay`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/remote-vs-office-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/remote-work-savings-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/two-jobs-burnout-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/uk-cost-of-working-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${base}/us-cost-of-working-calculator`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
+    // Calculator pages (updated ~1 month ago)
+    { url: `${base}/real-hourly-wage-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/commute-cost-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/cost-of-working-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/move-city-cost-of-living-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/part-time-vs-full-time-hourly-pay`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/remote-vs-office-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/remote-work-savings-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/two-jobs-burnout-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/uk-cost-of-working-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
+    { url: `${base}/us-cost-of-working-calculator`, lastModified: CORE_CALCULATORS_UPDATED },
 
-    // Content / side pages
-    {
-      url: `${base}/reddit`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${base}/tiktok`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
+    // Side content (recent tweaks)
+    //{ url: `${base}/reddit`, lastModified: STATIC_PAGES_UPDATED },
+    //{ url: `${base}/tiktok`, lastModified: STATIC_PAGES_UPDATED },
 
     // Legal
-    {
-      url: `${base}/privacy`,
-      lastModified: today,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
+    { url: `${base}/privacy`, lastModified: LEGAL_PAGES_UPDATED },
   ];
 
-  // Programmatic "Is this salary enough in CITY?" base city pages
+  // City-level "Is this salary enough?" pages
   const enoughCityUrls: MetadataRoute.Sitemap = UK_CITIES.map((city) => ({
     url: `${base}/enough/uk/${city.slug}/`,
-    lastModified: today,
-    changeFrequency: "monthly",
-    priority: 0.7,
+    lastModified: CITY_PAGES_UPDATED,
   }));
 
-  // Programmatic salary × city pages for key bands
-  const SALARY_BANDS = [
-    20000, 25000, 30000, 35000,
-    40000, 45000, 50000, 55000, 60000,
-  ];
-
-  const salaryCityUrls: MetadataRoute.Sitemap = UK_CITIES.flatMap((city) =>
-    SALARY_BANDS.map((salary) => ({
-      url: `${base}/enough/uk/${city.slug}/${salary}/`,
-      lastModified: today,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    }))
-  );
-
-  return [...staticUrls, ...enoughCityUrls, ...salaryCityUrls];
+  return [...staticUrls, ...enoughCityUrls];
 }
