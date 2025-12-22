@@ -9,65 +9,41 @@ type Props = {
   salary?: string | number;
 };
 
-export default function EnoughBreadcrumbJsonLd({
-  country,
-  citySlug,
-  salary,
-}: Props) {
+export default function EnoughBreadcrumbJsonLd({ country, citySlug, salary }: Props) {
   const crumbs: { name: string; item: string }[] = [
-    {
-      name: "Home",
-      item: `${BASE_URL}/`,
-    },
-    {
-      name: "Is this salary enough?",
-      item: `${BASE_URL}/enough`,
-    },
+    { name: "Home", item: `${BASE_URL}/` },
+    { name: "Is this salary enough?", item: `${BASE_URL}/enough` },
   ];
 
   const countrySlug = country?.toLowerCase();
   const citySlugSafe = citySlug?.toLowerCase();
 
-  if (countrySlug) {
-    const countryName =
-      countrySlug === "uk" ? "United Kingdom" : countrySlug.toUpperCase();
-
+  // Since /enough is your UK hub (and /enough/uk redirects to it), skip a UK crumb.
+  if (countrySlug && countrySlug !== "uk") {
     crumbs.push({
-      name: countryName,
-      item: `${BASE_URL}/enough/${countrySlug}/`,
+      name: countrySlug.toUpperCase(),
+      item: `${BASE_URL}/enough/${countrySlug}`,
     });
   }
 
   if (countrySlug && citySlugSafe) {
-    const city = UK_CITIES.find(
-      (c) => c.slug.toLowerCase() === citySlugSafe
-    );
+    const city = UK_CITIES.find((c) => c.slug.toLowerCase() === citySlugSafe);
     const cityLabel =
-      city?.label ??
-      citySlugSafe.charAt(0).toUpperCase() + citySlugSafe.slice(1);
+      city?.label ?? citySlugSafe.charAt(0).toUpperCase() + citySlugSafe.slice(1);
 
     crumbs.push({
       name: cityLabel,
-      item: `${BASE_URL}/enough/${countrySlug}/${citySlugSafe}/`,
+      item: `${BASE_URL}/enough/${countrySlug}/${citySlugSafe}`,
     });
   }
 
   const salaryNumber =
-    typeof salary === "string"
-      ? Number(salary)
-      : typeof salary === "number"
-      ? salary
-      : undefined;
+    typeof salary === "string" ? Number(salary) : typeof salary === "number" ? salary : undefined;
 
-  if (
-    countrySlug &&
-    citySlugSafe &&
-    salaryNumber &&
-    Number.isFinite(salaryNumber)
-  ) {
+  if (countrySlug && citySlugSafe && salaryNumber && Number.isFinite(salaryNumber)) {
     crumbs.push({
       name: `£${salaryNumber.toLocaleString("en-GB")} salary`,
-      item: `${BASE_URL}/enough/${countrySlug}/${citySlugSafe}/${salaryNumber}/`,
+      item: `${BASE_URL}/enough/${countrySlug}/${citySlugSafe}/${salaryNumber}`,
     });
   }
 
