@@ -2,7 +2,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
-import Header from "./components/header"; // relative import to app/components/header.tsx
+import Header from "./components/header";
 
 export const metadata: Metadata = {
   title: "Real Cost of Working Calculator | Commute, Rent & Remote Work",
@@ -19,33 +19,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{
             __html: `
 (function(){
-  // Helpers
   const isBadIframe = (el) => {
     try {
       if (!el) return false;
       const n = (el.getAttribute('name') || '').toLowerCase();
       const s = (el.getAttribute('src') || '').toLowerCase();
-
-      // Only treat Funding Choices consent iframe as "bad"
-      // (googlefcPresent / fundingchoicesmessages)
       return (
         n === 'googlefcpresent' ||
         s.includes('fundingchoicesmessages.google.com') ||
         s.includes('fundingchoices')
       );
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   };
 
-  // 1) Patch iframe.focus to ignore bad iframes
   const origFocus = HTMLIFrameElement.prototype.focus;
   HTMLIFrameElement.prototype.focus = function(...args){
     if (isBadIframe(this)) return;
     return origFocus.apply(this, args);
   };
 
-  // 2) Whenever DOM changes, neuter new bad iframes immediately
   const tameRoot = (root=document) => {
     root.querySelectorAll?.('iframe').forEach((f)=>{
       if (!isBadIframe(f)) return;
@@ -63,15 +55,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       }catch{}
     });
   };
+
   tameRoot(document);
   const mo = new MutationObserver(muts => muts.forEach(m=>{
     m.addedNodes.forEach(n=>{
-      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n as any);
+      if (n instanceof HTMLElement || n instanceof DocumentFragment) tameRoot(n);
     });
   }));
   mo.observe(document.documentElement,{childList:true,subtree:true});
 
-  // 3) Block focus events bubbling from those iframes (belt & braces)
   const kill = (e)=>{ const t=e.target; if (t instanceof HTMLIFrameElement && isBadIframe(t)) { try{t.blur?.()}catch{} e.stopImmediatePropagation(); e.preventDefault(); } };
   window.addEventListener('focusin', kill, true);
   window.addEventListener('pointerdown', kill, true);
@@ -87,12 +79,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5496446780439803"
           crossOrigin="anonymous"
-        ></script>
+        />
 
         {/* Google Funding Choices loader */}
-        <script async src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"></script>
+        <script
+          async
+          src="https://fundingchoicesmessages.google.com/i/pub-5496446780439803?ers=1"
+        />
 
-        {/* Structured data */}
+        {/* Global Structured data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -104,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 "Calculate your real hourly income after the true costs of work, commute, and lifestyle.",
               applicationCategory: "FinanceApplication",
               operatingSystem: "All",
-              url: "https://real-cost-sim.com",
+              url: "https://www.real-cost-sim.com",
               patchNotes:
                 "Supports UK cities, remote work, commute time, and cost-of-living comparisons.",
             }),
@@ -113,38 +108,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body className="min-h-screen flex flex-col">
-        {/* Tiny global header with burger nav */}
         <Header />
-
         <main className="flex-grow">{children}</main>
 
         <footer className="mt-20 mb-10 text-center text-[13px] text-zinc-500">
-  <p>© {new Date().getFullYear()} Real Cost Simulator</p>
-
-  <div className="mt-2 flex justify-center gap-4">
-    <a
-      href="/about"
-      className="hover:text-zinc-700 transition"
-    >
-      About
-    </a>
-
-    <a
-      href="/contact"
-      className="hover:text-zinc-700 transition"
-    >
-      Contact
-    </a>
-
-    <a
-      href="/privacy"
-      className="hover:text-zinc-700 transition"
-    >
-      Privacy & Cookies
-    </a>
-  </div>
-</footer>
-
+          <p>© {new Date().getFullYear()} Real Cost Simulator</p>
+          <div className="mt-2 flex justify-center gap-4">
+            <a href="/about" className="hover:text-zinc-700 transition">About</a>
+            <a href="/contact" className="hover:text-zinc-700 transition">Contact</a>
+            <a href="/privacy" className="hover:text-zinc-700 transition">Privacy & Cookies</a>
+          </div>
+        </footer>
 
         <Analytics />
       </body>
