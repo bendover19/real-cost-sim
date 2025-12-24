@@ -71,7 +71,7 @@ export default function EnoughCityPage({ params }: Props) {
         }
       >
         {/* Pass params explicitly to avoid client-side defaults */}
-        <EnoughClient country={params.country} city={params.city} />
+        <EnoughClient />
       </Suspense>
 
       {/* City-specific FAQ schema (safe, no fallbacks) */}
