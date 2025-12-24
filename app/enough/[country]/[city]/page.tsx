@@ -77,7 +77,9 @@ export default function EnoughCityPage({ params }: Props) {
 // ---------- FAQ JSON-LD (FAQPage schema) ----------
 
 function EnoughFaqJsonLd({ citySlug }: { citySlug?: string }) {
-  const slug = (citySlug ?? "london").toLowerCase();
+  const slug = citySlug?.toLowerCase();
+  if (!slug) return null;
+
   const city = UK_CITIES.find((c) => c.slug === slug);
   if (!city) return null;
 
@@ -86,7 +88,6 @@ function EnoughFaqJsonLd({ citySlug }: { citySlug?: string }) {
   return (
     <script
       type="application/ld+json"
-      // JSON-LD must be a raw string
       dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
     />
   );
