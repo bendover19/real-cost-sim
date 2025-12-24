@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import EnoughClient from "@app/enough/EnoughClient";
-import {
-  UK_CITIES,
-  approximateNetFromGrossUK,
-} from "@app/cityConfig";
+import { UK_CITIES, approximateNetFromGrossUK } from "@app/cityConfig";
 
 const BASE_URL = "https://www.real-cost-sim.com";
 
@@ -25,28 +23,39 @@ export async function generateStaticParams() {
 }
 
 type Props = {
-  params?: {
+  params: {
     country?: string;
     city?: string;
     salary?: string;
   };
 };
 
-export function generateMetadata({ params }: Props): Metadata {
-  const country = (params?.country ?? "uk").toLowerCase();
-  const citySlug = (params?.city ?? "london").toLowerCase();
-  const salaryNum = Number(params?.salary ?? 28000);
+function labelFromSlug(slug: string) {
+  const clean = slug.replace(/-/g, " ");
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
 
-  const city = UK_CITIES.find((c) => c.slug === citySlug);
-  const cityLabel =
-    city?.label ?? citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
+export function generateMetadata({ params }: Props): Metadata {
+  const country = (params.country ?? "uk").toLowerCase();
+
+  const citySlug = params.city?.toLowerCase();
+  if (!citySlug) notFound();
+
+  const city = UK_CITIES.find((c) => c.slug.toLowerCase() === citySlug);
+  if (!city) notFound();
+
+  const salaryNum = Number(params.salary);
+  if (!Number.isFinite(salaryNum)) notFound();
+
+  // Optional strictness: only allow your pre-rendered bands
+  if (!SALARY_BANDS.includes(salaryNum)) notFound();
+
+  const cityLabel = city.label;
 
   const net = approximateNetFromGrossUK(salaryNum);
   const netMonthly = Math.round(net / 12);
 
-  const title = `Is £${salaryNum.toLocaleString(
-    "en-GB"
-  )} enough to live in ${cityLabel}? | Real Cost Simulator`;
+  const title = `Is £${salaryNum.toLocaleString("en-GB")} enough to live in ${cityLabel}? | Real Cost Simulator`;
 
   const description = `${cityLabel} salary sense-check: with typical rent, bills and commute, someone earning £${salaryNum.toLocaleString(
     "en-GB"
@@ -77,7 +86,6 @@ export default function EnoughSalaryCityPage() {
           </div>
         }
       >
-        {/* EnoughClient will read the city and salary from the URL/path */}
         <EnoughClient />
       </Suspense>
     </main>
