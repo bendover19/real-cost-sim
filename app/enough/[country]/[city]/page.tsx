@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import EnoughClient from "@app/enough/EnoughClient";
 import {
   UK_CITIES,
@@ -24,23 +25,25 @@ export async function generateStaticParams() {
   }));
 }
 
+// ---------- METADATA (SERVER-ONLY, NO FALLBACKS) ----------
+
 export function generateMetadata({ params }: Props): Metadata {
   const country = (params.country ?? "uk").toLowerCase();
-  const citySlug = (params.city ?? "london").toLowerCase();
 
+  // ❗ Never default a city — fail instead
+  const cityParam = params.city;
+  if (!cityParam) notFound();
+
+  const citySlug = cityParam.toLowerCase();
   const city = UK_CITIES.find((c) => c.slug === citySlug);
-  const cityLabel =
-    city?.label ?? citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
+  if (!city) notFound();
+
+  const cityLabel = city.label;
 
   const title = `Is your salary enough to live in ${cityLabel}? | Real Cost Simulator`;
+  const description = generateCityDescription(city).slice(0, 155);
 
-  // short, city-specific meta description
-  const description =
-    city
-      ? generateCityDescription(city).slice(0, 155)
-      : `Rough breakdown of rent, bills, commute and leftovers for single renters in ${cityLabel}.`;
-
-  const canonical = `${BASE_URL}/enough/${country}/${citySlug}/`;
+  const canonical = `${BASE_URL}/enough/${country}/${citySlug}`;
 
   return {
     title,
@@ -55,6 +58,8 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
+// ---------- PAGE ----------
+
 export default function EnoughCityPage({ params }: Props) {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
@@ -65,10 +70,11 @@ export default function EnoughCityPage({ params }: Props) {
           </div>
         }
       >
-        <EnoughClient />
+        {/* Pass params explicitly to avoid client-side defaults */}
+        <EnoughClient country={params.country} city={params.city} />
       </Suspense>
 
-      {/* City-specific FAQ schema for rich results */}
+      {/* City-specific FAQ schema (safe, no fallbacks) */}
       <EnoughFaqJsonLd citySlug={params.city} />
     </main>
   );
@@ -98,7 +104,7 @@ function buildCityFaqJsonLd(city: CityConfig) {
   const rent = city.typicalRentSingle;
   const bills = city.typicalBills;
   const commute = city.typicalCommuteCost;
-  const exampleSalary = 28000; // just a simple reference salary
+  const exampleSalary = 28000;
 
   const salaryStr = `£${exampleSalary.toLocaleString("en-GB")}`;
   const rentStr = `£${rent.toLocaleString("en-GB")}`;
