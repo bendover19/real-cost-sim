@@ -30,6 +30,33 @@ function formatGBP(value: number): string {
   });
 }
 
+// ✅ 5k increments from 20k–60k
+const SALARY_BANDS: number[] = [
+  20000, 25000, 30000, 35000, 40000,
+  45000, 50000, 55000, 60000,
+];
+
+function clampToBandOrDefault(n: number, fallback: number): number {
+  if (!n || !Number.isFinite(n)) return fallback;
+
+  // If the number is exactly on a band, keep it
+  if (SALARY_BANDS.includes(n)) return n;
+
+  // Otherwise pick the nearest band
+  let best = SALARY_BANDS[0];
+  let bestDist = Math.abs(best - n);
+
+  for (const b of SALARY_BANDS) {
+    const d = Math.abs(b - n);
+    if (d < bestDist) {
+      best = b;
+      bestDist = d;
+    }
+  }
+
+  return best;
+}
+
 export default function EnoughClient() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -42,7 +69,7 @@ export default function EnoughClient() {
   // 2) Fallback / enhancement:
   // from path /enough/uk/london or /enough/uk/london/20000
   if (pathname) {
-    const segments = pathname.split("/").filter(Boolean); // e.g. ["enough","uk","london","20000"]
+    const segments = pathname.split("/").filter(Boolean); // ["enough","uk","london","20000"]
     const idx = segments.indexOf("enough");
     const after = idx === -1 ? [] : segments.slice(idx + 1); // ["uk","london","20000"]
 
@@ -53,7 +80,7 @@ export default function EnoughClient() {
 
     // If there's a salary path segment and no salary query param, use it
     if (!rawSalary && after.length >= 3) {
-      rawSalary = after[2]; // "20000"
+      rawSalary = after[2];
     }
   }
 
@@ -62,17 +89,20 @@ export default function EnoughClient() {
   if (!citySlug) citySlug = "london";
 
   const city = getCityConfig(citySlug);
-  const salaryFromQuery = parseSalary(rawSalary);
+
+  const salaryFromUrl = parseSalary(rawSalary);
 
   // Default salary if none given anywhere
-  const grossAnnual = salaryFromQuery || 28000;
+  const DEFAULT_SALARY = 28000;
+
+  // ✅ IMPORTANT: clamp to valid salary page bands so links never point to missing pages
+  const grossAnnual = clampToBandOrDefault(salaryFromUrl || DEFAULT_SALARY, DEFAULT_SALARY);
 
   const cityLabel = city?.label ?? citySlug;
   const countryLabel = (city?.country ?? country).toUpperCase();
 
   // income
-  const netAnnual =
-    grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
+  const netAnnual = grossAnnual > 0 ? approximateNetFromGrossUK(grossAnnual) : 0;
   const netMonthly = netAnnual / 12;
 
   // costs (rough)
@@ -92,10 +122,12 @@ export default function EnoughClient() {
   const baseCityUrl = `/enough/${country}/${citySlug}`;
   const simulatorUrl = `/sim?country=${country}&city=${citySlug}&salary=${grossAnnual}`;
 
-  // Nearby salaries: +/- £2k
-  const nearbySalaries = [grossAnnual - 2000, grossAnnual + 2000].filter(
-    (n) => n > 0
-  );
+  // ✅ Nearby salaries: nearest lower + nearest higher *from valid bands*
+  const nearbySalaries = (() => {
+    const lower = [...SALARY_BANDS].reverse().find((n) => n < grossAnnual);
+    const higher = SALARY_BANDS.find((n) => n > grossAnnual);
+    return [lower, higher].filter((n): n is number => typeof n === "number");
+  })();
 
   // Anchor cities for cross-linking
   const anchorCitySlugs = [
@@ -106,9 +138,7 @@ export default function EnoughClient() {
     "edinburgh",
   ];
 
-  const otherCities = anchorCitySlugs
-    .filter((slug) => slug !== citySlug)
-    .slice(0, 4);
+  const otherCities = anchorCitySlugs.filter((slug) => slug !== citySlug).slice(0, 4);
 
   return (
     <section className="w-full max-w-3xl">
@@ -122,9 +152,8 @@ export default function EnoughClient() {
         </h1>
 
         <p className="text-sm md:text-[15px] text-zinc-600 mb-4 leading-relaxed">
-          Rough estimate of what&apos;s left after typical rent, bills and commute
-          for a single renter in {cityLabel}. For proper planning, plug your own
-          numbers into the full Real Cost Simulator.
+          Rough estimate of what&apos;s left after typical rent, bills and commute for a single renter in{" "}
+          {cityLabel}. For proper planning, plug your own numbers into the full Real Cost Simulator.
         </p>
 
         {/* City-specific descriptive text */}
@@ -212,33 +241,30 @@ export default function EnoughClient() {
           </div>
         </div>
 
-        {/* 🔥 Main CTA: open this scenario in simulator */}
+        {/* Main CTA */}
         <div className="my-8 p-5 rounded-2xl bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200">
           <h3 className="text-[15px] font-semibold text-zinc-900 mb-2">
             Try this exact scenario in the Real Cost Simulator
           </h3>
           <p className="text-[13px] text-zinc-600 mb-4 leading-relaxed">
-            See your full breakdown including tax, commute time value, rent
-            impact, and your hourly freedom score for this salary in {cityLabel}.
+            See your full breakdown including tax, commute time value, rent impact, and your hourly freedom score for
+            this salary in {cityLabel}.
           </p>
           <a
-  href={simulatorUrl}
-  className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg overflow-hidden"
->
-  {/* Background pulse behind text */}
-  <span className="absolute inset-0 rounded-full border border-rose-300 animate-ping opacity-60 z-0"></span>
-
-  {/* Force white text, always on top */}
-  <span className="relative z-10 text-white !text-white">
-    Open this scenario in the Real Cost Simulator →
-  </span>
-</a>
+            href={simulatorUrl}
+            className="relative block w-full text-center rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] tracking-tight px-5 py-3 transition-all shadow-md hover:shadow-lg overflow-hidden"
+          >
+            <span className="absolute inset-0 rounded-full border border-rose-300 animate-ping opacity-60 z-0"></span>
+            <span className="relative z-10 text-white !text-white">
+              Open this scenario in the Real Cost Simulator →
+            </span>
+          </a>
           <p className="text-[11px] text-zinc-500 mt-2 text-center">
             Loads instantly · No signup needed
           </p>
         </div>
 
-        {/* Internal links: nearby salaries + other cities */}
+        {/* Internal links */}
         <div className="mt-8 space-y-5 text-sm text-zinc-700">
           {nearbySalaries.length > 0 && (
             <div>
@@ -252,9 +278,7 @@ export default function EnoughClient() {
                     href={`${baseCityUrl}/${s}`}
                     className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-[12px] hover:bg-zinc-50"
                   >
-                    {`Is £${s.toLocaleString(
-                      "en-GB"
-                    )} enough in ${cityLabel}?`}
+                    {`Is £${s.toLocaleString("en-GB")} enough in ${cityLabel}?`}
                   </a>
                 ))}
               </div>
@@ -266,9 +290,7 @@ export default function EnoughClient() {
             <div className="flex flex-wrap gap-2">
               {otherCities.map((slug) => {
                 const conf = UK_CITIES.find((c) => c.slug === slug);
-                const label =
-                  conf?.label ??
-                  slug.charAt(0).toUpperCase() + slug.slice(1);
+                const label = conf?.label ?? slug.charAt(0).toUpperCase() + slug.slice(1);
                 const href = `/enough/${country}/${slug}/${grossAnnual}`;
                 return (
                   <a
