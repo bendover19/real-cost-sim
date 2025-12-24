@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
 import EnoughClient from "@app/enough/EnoughClient";
 import {
   UK_CITIES,
@@ -25,40 +24,44 @@ export async function generateStaticParams() {
   }));
 }
 
-// ---------- METADATA (SERVER-ONLY, NO FALLBACKS) ----------
+function labelFromSlug(slug: string) {
+  const clean = slug.replace(/-/g, " ");
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
 
 export function generateMetadata({ params }: Props): Metadata {
   const country = (params.country ?? "uk").toLowerCase();
+  const cityParam = params.city?.toLowerCase();
 
-  // ❗ Never default a city — fail instead
-  const cityParam = params.city;
-  if (!cityParam) notFound();
+  // If no city param at all, fall back to the hub (but don't 404)
+  if (!cityParam) {
+    return {
+      title: "Is this salary enough? | Real Cost Simulator",
+      description:
+        "Check whether your salary is enough after rent, bills and commuting in major UK cities.",
+      alternates: { canonical: `${BASE_URL}/enough` },
+      robots: { index: true, follow: true },
+    };
+  }
 
-  const citySlug = cityParam.toLowerCase();
-  const city = UK_CITIES.find((c) => c.slug === citySlug);
-  if (!city) notFound();
-
-  const cityLabel = city.label;
+  const city = UK_CITIES.find((c) => c.slug.toLowerCase() === cityParam);
+  const cityLabel = city ? city.label : labelFromSlug(cityParam);
 
   const title = `Is your salary enough to live in ${cityLabel}? | Real Cost Simulator`;
-  const description = generateCityDescription(city).slice(0, 155);
 
-  const canonical = `${BASE_URL}/enough/${country}/${citySlug}`;
+  const description = city
+    ? generateCityDescription(city).slice(0, 155)
+    : `Rough breakdown of rent, bills, commute and leftovers for single renters in ${cityLabel}.`;
+
+  const canonical = `${BASE_URL}/enough/${country}/${cityParam}`;
 
   return {
     title,
     description,
-    alternates: {
-      canonical,
-    },
-    robots: {
-      index: true,
-      follow: true,
-    },
+    alternates: { canonical },
+    robots: { index: true, follow: true },
   };
 }
-
-// ---------- PAGE ----------
 
 export default function EnoughCityPage({ params }: Props) {
   return (
@@ -70,11 +73,10 @@ export default function EnoughCityPage({ params }: Props) {
           </div>
         }
       >
-        {/* Pass params explicitly to avoid client-side defaults */}
         <EnoughClient />
       </Suspense>
 
-      {/* City-specific FAQ schema (safe, no fallbacks) */}
+      {/* Only output FAQ schema if the city is in our config */}
       <EnoughFaqJsonLd citySlug={params.city} />
     </main>
   );
@@ -86,7 +88,7 @@ function EnoughFaqJsonLd({ citySlug }: { citySlug?: string }) {
   const slug = citySlug?.toLowerCase();
   if (!slug) return null;
 
-  const city = UK_CITIES.find((c) => c.slug === slug);
+  const city = UK_CITIES.find((c) => c.slug.toLowerCase() === slug);
   if (!city) return null;
 
   const faqJsonLd = buildCityFaqJsonLd(city);
