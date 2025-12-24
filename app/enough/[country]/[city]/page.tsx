@@ -29,12 +29,13 @@ function labelFromSlug(slug: string) {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
+// ---------- METADATA (SERVER-ONLY, NO LONDON FALLBACKS, NO HARD 404s) ----------
 export function generateMetadata({ params }: Props): Metadata {
   const country = (params.country ?? "uk").toLowerCase();
-  const cityParam = params.city?.toLowerCase();
+  const citySlug = params.city?.toLowerCase();
 
-  // If no city param at all, fall back to the hub (but don't 404)
-  if (!cityParam) {
+  // If something is weird and city is missing, don't 404 — just serve a safe generic meta.
+  if (!citySlug) {
     return {
       title: "Is this salary enough? | Real Cost Simulator",
       description:
@@ -44,8 +45,8 @@ export function generateMetadata({ params }: Props): Metadata {
     };
   }
 
-  const city = UK_CITIES.find((c) => c.slug.toLowerCase() === cityParam);
-  const cityLabel = city ? city.label : labelFromSlug(cityParam);
+  const city = UK_CITIES.find((c) => c.slug.toLowerCase() === citySlug);
+  const cityLabel = city ? city.label : labelFromSlug(citySlug);
 
   const title = `Is your salary enough to live in ${cityLabel}? | Real Cost Simulator`;
 
@@ -53,7 +54,7 @@ export function generateMetadata({ params }: Props): Metadata {
     ? generateCityDescription(city).slice(0, 155)
     : `Rough breakdown of rent, bills, commute and leftovers for single renters in ${cityLabel}.`;
 
-  const canonical = `${BASE_URL}/enough/${country}/${cityParam}`;
+  const canonical = `${BASE_URL}/enough/${country}/${citySlug}`;
 
   return {
     title,
@@ -63,6 +64,7 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
+// ---------- PAGE ----------
 export default function EnoughCityPage({ params }: Props) {
   return (
     <main className="min-h-screen flex justify-center items-start bg-gradient-to-b from-rose-50 to-sky-50 px-4 py-10">
@@ -76,14 +78,13 @@ export default function EnoughCityPage({ params }: Props) {
         <EnoughClient />
       </Suspense>
 
-      {/* Only output FAQ schema if the city is in our config */}
+      {/* City-specific FAQ schema (only if city exists in config) */}
       <EnoughFaqJsonLd citySlug={params.city} />
     </main>
   );
 }
 
 // ---------- FAQ JSON-LD (FAQPage schema) ----------
-
 function EnoughFaqJsonLd({ citySlug }: { citySlug?: string }) {
   const slug = citySlug?.toLowerCase();
   if (!slug) return null;
